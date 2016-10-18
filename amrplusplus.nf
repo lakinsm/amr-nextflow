@@ -2,9 +2,9 @@
 
 params.pair1 = "${PWD}/*_R1*.fastq"
 params.pair2 = "${PWD}/*_R2*.fastq"
-params.genome = "/s/angus/index/databases/bwa_indexes/mod_bos_taurus/mod_bos_taurus.fna"
+params.genome = "/s/angus/index/databases/bowtie2_indexes/mod_bos_taurus/mod_bos_taurus.fna"
 params.amr_db = "/s/angus/index/databases/MEGARes/megares_database.fasta"
-params.kraken_db = "/s/angus/index/databases/kraken_databases/kraken_refcustom_Oct2016/database"
+params.kraken_db = "/s/angus/index/databases/kraken_databases/kraken_refcustom_Oct2016/database.kdb"
 params.threads = 1
 
 log.info "AmrPlusPlus - NF ~ version 1.0.0"
@@ -29,7 +29,7 @@ if(!amr_db.exists()) {
         exit 1, "Unable to find genome file: {params.amr_db}"
 }
 if(!kraken_db.exists()) {
-        exit 1, "Unable to find virulence file: {params.kraken_db}"
+        exit 1, "Unable to find kraken database file: {params.kraken_db}"
 }
 
 forward_reads = Channel
@@ -57,12 +57,11 @@ process bowtie2_genome_alignment {
 
 	output:
 	set dataset_id, file('host_alignment.sam') into genome_sam_files
-	set dataset_id, file('nonhost_alignment.bam') into genome_sam_files
-	set dataset_id, file('nonhost_forward.fastq') into read_files_nonhost
-	set dataset_id, file('nonhost_reverse.fastq') into read_files_nonhost
+	set dataset_id, file('nonhost_alignment.bam') into nonhost_bam_files
+	set dataset_id, file('nonhost_forward.fastq'), file('nonhost_reverse.fastq') into read_files_nonhost_amr, read_files_nonhost_kraken
 
 	"""
-	bowtie2 -p ${threads} -x ${genome} -1 ${forward} -2 ${reverse} -S host_alignment.sam
+	bowtie2 -p ${threads} -x ${params.genome} -1 ${forward} -2 ${reverse} -S host_alignment.sam
 	samtools view -h -f 4 -b host_alignment.sam > nonhost_alignment.bam
 	bamToFastq -i nonhost_alignment.bam -fq nonhost_forward.fastq -fq2 nonhost_reverse.fastq
 	"""
@@ -70,14 +69,14 @@ process bowtie2_genome_alignment {
 
 process bowtie2_amr_alignment {
 	input:
-	set dataset_id, file(forward), file(reverse) from read_files_nonhost
+	set dataset_id, file(forward), file(reverse) from read_files_nonhost_amr
 	file index from amr_db.first()
 
 	output:
 	set dataset_id, file('amr_alignment.sam') into amr_sam_files
 
 	"""
-	bowtie2 -p ${threads} -x amr.index -1 $forward -2 $reverse -S amr_alignment.sam
+	bowtie2 -p ${threads} -x ${params.amr_db} -1 $forward -2 $reverse -S amr_alignment.sam
 	"""
 }
 
@@ -96,16 +95,16 @@ process amr_coverage_sampler {
 
 process kraken_classification {
 	input:
-	set dataset_id, file(forward), file(reverse) from read_files_nonhost
+	set dataset_id, file(forward), file(reverse) from read_files_nonhost_kraken
 	file kdb from kraken_db
 
 	output:
-	set dataset_id, file('kraken.raw') into kraken_files
-	set dataset_id, file('kraken.report') into kraken_files
+	set dataset_id, file('kraken.raw') into kraken_raw
+	set dataset_id, file('kraken.report') into kraken_report
 
 	"""
-	kraken --preload --db ${kdb} --threads ${threads} --fastq-input --paired ${forward} ${reverse} > kraken.raw
-	kraken-report -db ${kdb} kraken.raw > kraken.report
+	kraken --preload --db ${params.kraken_db} --threads ${threads} --fastq-input --paired ${forward} ${reverse} > kraken.raw
+	kraken-report -db ${params.kraken_db} kraken.raw > kraken.report
 	"""
 }
 
