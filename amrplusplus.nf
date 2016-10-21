@@ -4,7 +4,7 @@ params.pair1 = "${PWD}/*_R1*.fastq"
 params.pair2 = "${PWD}/*_R2*.fastq"
 params.genome = "/s/angus/index/databases/bowtie2_indexes/mod_bos_taurus/mod_bos_taurus.fna"
 params.amr_db = "/s/angus/index/databases/MEGARes/megares_database.fasta"
-params.kraken_db = "/s/angus/index/databases/kraken_databases/kraken_refcustom_Oct2016/database.kdb"
+params.kraken_db = "/s/angus/index/databases/kraken_databases/Standard_kraken_10.14.db"
 params.threads = 1
 
 log.info "AmrPlusPlus - NF ~ version 1.0.0"
@@ -29,7 +29,7 @@ if(!amr_db.exists()) {
         exit 1, "Unable to find genome file: {params.amr_db}"
 }
 if(!kraken_db.exists()) {
-        exit 1, "Unable to find kraken database file: {params.kraken_db}"
+        exit 1, "Unable to find kraken database folder: {params.kraken_db}"
 }
 
 forward_reads = Channel
@@ -45,9 +45,19 @@ params.read_pairs = forward_reads
              .map { pair1, pair2 -> [ pathToDatasetID(pair1[1]), pair1[1], pair2[1] ] }
 
 params.read_pairs.into {
-	read_files_genome;
-	read_files_amr;
-	read_files_kraken
+	read_files_trimmed
+}
+
+process trimmomatic_qc {
+        input:
+        set dataset_id, file(forward), file(reverse) from read_files_trimmed
+
+        output:
+        set dataset_id, file('trimmed_forward.fastq'), file('trimmed_reverse.fastq') into read_files_genome, read_files_amr, read_files_kraken
+
+        """
+        java -jar /s/angus/index/common/tools/Trimmomatic-0-1.32/trimmomatic-0.32.jar PE -threads ${threads} -phred33 ${forward} ${reverse} trimmed_forward.fastq 1U.fastq trimmed_reverse.fastq 2U.fastq ILLUMINACLIP:/s/angus/index/common/tools/Trimmomatic-0-1.32/adapters/TruSeq3-PE.fa:2:30:10:3:TRUE LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+        """
 }
 
 process bowtie2_genome_alignment {
