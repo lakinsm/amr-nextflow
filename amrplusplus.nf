@@ -42,7 +42,7 @@ reverse_reads = Channel
 
 params.read_pairs = forward_reads
 	     .phase(reverse_reads)
-             .map { pair1, pair2 -> [ pathToDatasetID(pair1[1]), pair1[1], pair2[1] ] }
+             	.map { pair1, pair2 -> [ pathToDatasetID(pair1[1]), pair1[1], pair2[1] ] }
 
 params.read_pairs.into {
 	read_files_trimmed
