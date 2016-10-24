@@ -61,6 +61,8 @@ process trimmomatic_qc {
 }
 
 process bowtie2_genome_alignment {
+	publishDir 'sam_bam_output'
+	
 	input:
 	set dataset_id, file(forward), file(reverse) from read_files_genome
 	file genome
@@ -78,6 +80,8 @@ process bowtie2_genome_alignment {
 }
 
 process bowtie2_amr_alignment {
+	publishDir 'amr_output'
+	
 	input:
 	set dataset_id, file(forward), file(reverse) from read_files_nonhost_amr
 	file index from amr_db.first()
@@ -91,6 +95,8 @@ process bowtie2_amr_alignment {
 }
 
 process amr_coverage_sampler {
+	publishDir 'amr_output'
+	
 	input:
 	set dataset_id, file(amr_sam_alignment) from amr_sam_files
 	file amrdb from amr_db
@@ -104,6 +110,8 @@ process amr_coverage_sampler {
 }
 
 process kraken_classification {
+	publishDir 'kraken_output'
+
 	input:
 	set dataset_id, file(forward), file(reverse) from read_files_nonhost_kraken
 	file kdb from kraken_db
