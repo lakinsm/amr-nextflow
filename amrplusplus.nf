@@ -2,7 +2,7 @@
 
 params.pair1 = "${PWD}/*_R1*.fastq"
 params.pair2 = "${PWD}/*_R2*.fastq"
-params.trim_path = "${trim_path}"
+params.trim_path = "/s/angus/index/common/tools/Trimmomatic-0-1.32"
 params.threads = 1
 
 process print_log {
