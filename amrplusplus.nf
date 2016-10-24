@@ -72,12 +72,12 @@ process bowtie2_genome_alignment {
 	set dataset_id, file('nonhost_forward.fastq'), file('nonhost_reverse.fastq') into read_files_nonhost_amr, read_files_nonhost_kraken
 	
 	shell:
-	"""
+	'''
 	#!/usr/bin/env bash
-	bowtie2 -p ${threads} -x ${genome} -1 ${forward} -2 ${reverse} -S host_alignment.sam
+	bowtie2 -p !{threads} -x ${genome} -1 !{forward} -2 !{reverse} -S host_alignment.sam
 	samtools view -h -f 4 -b host_alignment.sam > nonhost_alignment.bam
 	bamToFastq -i nonhost_alignment.bam -fq nonhost_forward.fastq -fq2 nonhost_reverse.fastq
-	"""
+	'''
 }
 
 process bowtie2_amr_alignment {
@@ -90,10 +90,10 @@ process bowtie2_amr_alignment {
 	set dataset_id, file('amr_alignment.sam') into amr_sam_files
 	
 	shell:
-	"""
+	'''
 	#!/usr/bin/env bash
-	bowtie2 -p ${threads} -x ${amr_db} -1 $forward -2 $reverse -S amr_alignment.sam
-	"""
+	bowtie2 -p !{threads} -x ${amr_db} -1 !{forward} -2 !{reverse} -S amr_alignment.sam
+	'''
 }
 
 process amr_coverage_sampler {
@@ -106,10 +106,10 @@ process amr_coverage_sampler {
 	set dataset_id, file('coverage_sampler_amr.tab') into amr_csa_files
 
 	shell:
-	"""
+	'''
 	#!/usr/bin/env bash
-	csa -ref_fp ${amr_db} -sam_fp $amr_sam_alignment -min 100 -max 100 -skip 5 -t 80 -samples 1 -out_fp coverage_sampler_amr.tab
-	"""
+	csa -ref_fp ${amr_db} -sam_fp !{amr_sam_alignment} -min 100 -max 100 -skip 5 -t 80 -samples 1 -out_fp coverage_sampler_amr.tab
+	'''
 }
 
 process kraken_classification {
