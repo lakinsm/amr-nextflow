@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
-params.pair1 = "${PWD}/*_R1*.fastq"
-params.pair2 = "${PWD}/*_R2*.fastq"
+params.pair1 = "${PWD}/*_R1*.fastq.gz*"
+params.pair2 = "${PWD}/*_R2*.fastq.gz*"
 params.output = "${PWD}"
 params.threads = 15
 
