@@ -48,6 +48,8 @@ params.read_pairs.into {
 }
 
 process trimmomatic_qc {
+	maxForks 2
+
         input:
         set dataset_id, file(forward), file(reverse) from read_files_trimmed
 
@@ -60,6 +62,7 @@ process trimmomatic_qc {
 }
 
 process bowtie2_genome_alignment {
+	maxForks 1
 	publishDir "${params.output}/sam_bam_output"
 	
 	input:
@@ -67,17 +70,31 @@ process bowtie2_genome_alignment {
 
 	output:
 	set dataset_id, file('host_alignment.sam') into genome_sam_files
-	set dataset_id, file('nonhost_alignment.bam') into nonhost_bam_files
-	set dataset_id, file('nonhost_forward.fastq'), file('nonhost_reverse.fastq') into read_files_nonhost_amr, read_files_nonhost_kraken
 	
 	"""
 	bowtie2 -p ${threads} -x ${GENOME} -1 ${forward} -2 ${reverse} -S host_alignment.sam
-	samtools view -h -f 4 -b host_alignment.sam > nonhost_alignment.bam
+	"""
+}
+
+process samtools_view_to_fastq {
+	maxForks 15
+	publishDir "${params.output}/sam_bam_output"
+
+	input:
+	set dataset_id, file(host_alignment) from genome_sam_files
+
+	output:
+	set dataset_id, file('nonhost_alignment.bam') into nonhost_bam_files
+	set dataset_id, file('nonhost_forward.fastq'), file('nonhost_reverse.fastq') into read_files_nonhost_amr, read_files_nonhost_kraken
+
+	"""
+	samtools view -h -f 4 -b ${host_alignment} > nonhost_alignment.bam
 	bamToFastq -i nonhost_alignment.bam -fq nonhost_forward.fastq -fq2 nonhost_reverse.fastq
 	"""
 }
 
 process bowtie2_amr_alignment {
+	maxForks 1
 	publishDir "${params.output}/amr_output"
 	
 	input:
@@ -92,6 +109,7 @@ process bowtie2_amr_alignment {
 }
 
 process amr_coverage_sampler {
+	maxForks 4
 	publishDir "${params.output}/amr_output"
 	
 	input:
@@ -106,6 +124,7 @@ process amr_coverage_sampler {
 }
 
 process kraken_classification {
+	maxForks 1
 	publishDir "${params.output}/kraken_output"
 
 	input:
