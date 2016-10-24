@@ -63,7 +63,6 @@ process bowtie2_genome_alignment {
 	
 	input:
 	set dataset_id, file(forward), file(reverse) from read_files_genome
-	file genome
 
 	output:
 	set dataset_id, file('host_alignment.sam') into genome_sam_files
