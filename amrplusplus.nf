@@ -4,6 +4,7 @@ params.pair1 = "${PWD}/*_R1*.fastq.gz*"
 params.pair2 = "${PWD}/*_R2*.fastq.gz*"
 params.output = "${PWD}"
 params.threads = 15
+params.forks = 2
 
 process print_log {
 
