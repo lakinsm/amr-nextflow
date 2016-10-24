@@ -6,7 +6,7 @@ params.threads = 1
 
 process print_log {
 
-'''
+"""
 echo "
 AmrPlusPlus - NF ~ version 1.0.0
 ================================
@@ -16,15 +16,14 @@ Host Genome        : \${genome}
 Forward Reads      : ${params.pair1}
 Reverse Reads      : ${params.pair2}
 Number of Threads  : ${params.threads}
-\n"
 
 Program paths used:
 Java               : `whereis java`
 Bowtie2:           : `whereis bowtie2`
 CoverageSampler    : `whereis csa`
 Kraken             : `whereis kraken`
-\n"
-'''
+"
+"""
 
 }
 
