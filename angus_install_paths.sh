@@ -13,7 +13,5 @@ if [[ ! $amr_db ]]; then echo 'amr_db="/s/angus/index/databases/MEGARes/megares_
 if [[ ! $kraken_db ]]; then echo 'kraken_db="/s/angus/index/databases/kraken_databases/Standard_kraken_10.14.db"' >> ${HOME}/.bashrc; fi
 if [[ ! $trim_path ]]; then echo 'trim_path="/s/angus/index/common/tools/Trimmomatic-0-1.32"' >> ${HOME}/.bashrc; fi
 
-source ~/.bashrc
-
 exit 0
 
