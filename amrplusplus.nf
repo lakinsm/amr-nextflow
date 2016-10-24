@@ -121,8 +121,8 @@ process kraken_classification {
 
 	"""
 	#!/usr/bin/env bash
-	kraken --preload --db \$kraken_db --threads ${threads} --fastq-input --paired ${forward} ${reverse} > kraken.raw
-	kraken-report -db \$kraken_db kraken.raw > kraken.report
+	kraken --preload --threads ${threads} --fastq-input --paired ${forward} ${reverse} > kraken.raw
+	kraken-report kraken.raw > kraken.report
 	"""
 }
 
