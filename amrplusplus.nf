@@ -6,9 +6,9 @@ params.threads = 1
 
 log.info "AmrPlusPlus - NF ~ version 1.0.0"
 log.info "================================"
-log.info "AMR Database       : \${amr_db}"
-log.info "Kraken Database    : \${kraken_db}"
-log.info "Host Genome        : \${genome}"
+log.info "AMR Database       : ${amr_db}"
+log.info "Kraken Database    : ${kraken_db}"
+log.info "Host Genome        : ${genome}"
 log.info "Forward Reads      : ${params.pair1}"
 log.info "Reverse Reads      : ${params.pair2}"
 log.info "Number of Threads  : ${params.threads}"
@@ -22,9 +22,9 @@ log.info "Kraken             : `whereis kraken`"
 log.info "\n"
 
 
-genome = file(\$genome)
-amr_db = file(\$amr_db)
-kraken_db = file(\$kraken_db)
+genome = file($genome)
+amr_db = file($amr_db)
+kraken_db = file($kraken_db)
 threads = params.threads
 
 if(!genome.exists()) {
