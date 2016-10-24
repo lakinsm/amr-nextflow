@@ -4,38 +4,31 @@ params.pair1 = "${PWD}/*_R1*.fastq"
 params.pair2 = "${PWD}/*_R2*.fastq"
 params.threads = 1
 
-log.info "AmrPlusPlus - NF ~ version 1.0.0"
-log.info "================================"
-log.info "AMR Database       : ${amr_db}"
-log.info "Kraken Database    : ${kraken_db}"
-log.info "Host Genome        : ${genome}"
-log.info "Forward Reads      : ${params.pair1}"
-log.info "Reverse Reads      : ${params.pair2}"
-log.info "Number of Threads  : ${params.threads}"
-log.info "\n"
+process print_log {
 
-log.info "Program paths used:"
-log.info "Java               : `whereis java`"
-log.info "Bowtie2:           : `whereis bowtie2`"
-log.info "CoverageSampler    : `whereis csa`"
-log.info "Kraken             : `whereis kraken`"
-log.info "\n"
+'''
+echo "
+AmrPlusPlus - NF ~ version 1.0.0
+================================
+AMR Database       : \${amr_db}
+Kraken Database    : \${kraken_db}
+Host Genome        : \${genome}
+Forward Reads      : ${params.pair1}
+Reverse Reads      : ${params.pair2}
+Number of Threads  : ${params.threads}
+\n"
 
+Program paths used:
+Java               : `whereis java`
+Bowtie2:           : `whereis bowtie2`
+CoverageSampler    : `whereis csa`
+Kraken             : `whereis kraken`
+\n"
+'''
 
-genome = file($genome)
-amr_db = file($amr_db)
-kraken_db = file($kraken_db)
+}
+
 threads = params.threads
-
-if(!genome.exists()) {
-	exit 1, "Unable to find genome file: {params.genome}"
-}
-if(!amr_db.exists()) {
-        exit 1, "Unable to find genome file: {params.amr_db}"
-}
-if(!kraken_db.exists()) {
-        exit 1, "Unable to find kraken database folder: {params.kraken_db}"
-}
 
 forward_reads = Channel
 		.fromPath(params.pair1)
@@ -78,7 +71,7 @@ process bowtie2_genome_alignment {
 	set dataset_id, file('nonhost_forward.fastq'), file('nonhost_reverse.fastq') into read_files_nonhost_amr, read_files_nonhost_kraken
 
 	"""
-	bowtie2 -p ${threads} -x ${params.genome} -1 ${forward} -2 ${reverse} -S host_alignment.sam
+	bowtie2 -p ${threads} -x \${genome} -1 ${forward} -2 ${reverse} -S host_alignment.sam
 	samtools view -h -f 4 -b host_alignment.sam > nonhost_alignment.bam
 	bamToFastq -i nonhost_alignment.bam -fq nonhost_forward.fastq -fq2 nonhost_reverse.fastq
 	"""
@@ -95,7 +88,7 @@ process bowtie2_amr_alignment {
 	set dataset_id, file('amr_alignment.sam') into amr_sam_files
 
 	"""
-	bowtie2 -p ${threads} -x ${params.amr_db} -1 $forward -2 $reverse -S amr_alignment.sam
+	bowtie2 -p ${threads} -x \${amr_db} -1 $forward -2 $reverse -S amr_alignment.sam
 	"""
 }
 
@@ -110,7 +103,7 @@ process amr_coverage_sampler {
 	set dataset_id, file('coverage_sampler_amr.tab') into amr_csa_files
 
 	"""
-	csa -ref_fp $amrdb -sam_fp $amr_sam_alignment -min 100 -max 100 -skip 5 -t 80 -samples 1 -out_fp coverage_sampler_amr.tab
+	csa -ref_fp \$amrdb -sam_fp $amr_sam_alignment -min 100 -max 100 -skip 5 -t 80 -samples 1 -out_fp coverage_sampler_amr.tab
 	"""
 }
 
@@ -126,8 +119,8 @@ process kraken_classification {
 	set dataset_id, file('kraken.report') into kraken_report
 
 	"""
-	kraken --preload --db ${params.kraken_db} --threads ${threads} --fastq-input --paired ${forward} ${reverse} > kraken.raw
-	kraken-report -db ${params.kraken_db} kraken.raw > kraken.report
+	kraken --preload --db \${kraken_db} --threads ${threads} --fastq-input --paired ${forward} ${reverse} > kraken.raw
+	kraken-report -db \${kraken_db} kraken.raw > kraken.report
 	"""
 }
 
