@@ -120,7 +120,6 @@ process kraken_classification {
 	set dataset_id, file('kraken.report') into kraken_report
 
 	"""
-	#!/usr/bin/env bash
 	kraken --preload --db \$kraken_db --threads ${threads} --fastq-input --paired ${forward} ${reverse} > kraken.raw
 	kraken-report -db \$kraken_db kraken.raw > kraken.report
 	"""
