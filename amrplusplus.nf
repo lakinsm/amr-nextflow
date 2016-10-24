@@ -7,6 +7,7 @@ params.threads = 1
 process print_log {
 
 """
+#!/usr/bin/env bash
 echo "
 AmrPlusPlus - NF ~ version 1.0.0
 ================================
