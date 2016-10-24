@@ -10,9 +10,9 @@ process print_log {
 echo "
 AmrPlusPlus - NF ~ version 1.0.0
 ================================
-AMR Database       : $amr_db
-Kraken Database    : $kraken_db
-Host Genome        : $genome
+AMR Database       : \$amr_db
+Kraken Database    : \$kraken_db
+Host Genome        : \$genome
 Forward Reads      : ${params.pair1}
 Reverse Reads      : ${params.pair2}
 Number of Threads  : ${params.threads}
