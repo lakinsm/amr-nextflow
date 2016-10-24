@@ -2,6 +2,7 @@
 
 params.pair1 = "${PWD}/*_R1*.fastq"
 params.pair2 = "${PWD}/*_R2*.fastq"
+params.trim_path = "${trim_path}"
 params.threads = 1
 
 process print_log {
@@ -55,7 +56,7 @@ process trimmomatic_qc {
 
         """
         #!/usr/bin/env bash
-        java -jar \${trim_path}/trimmomatic-0.32.jar PE -threads ${threads} -phred33 ${forward} ${reverse} trimmed_forward.fastq 1U.fastq trimmed_reverse.fastq 2U.fastq ILLUMINACLIP:\${trim_path}/adapters/TruSeq3-PE.fa:2:30:10:3:TRUE LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+        java -jar ${params.trim_path}/trimmomatic-0.32.jar PE -threads ${threads} -phred33 ${forward} ${reverse} trimmed_forward.fastq 1U.fastq trimmed_reverse.fastq 2U.fastq ILLUMINACLIP:${params.trim_path}/adapters/TruSeq3-PE.fa:2:30:10:3:TRUE LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
         """
 }
 
