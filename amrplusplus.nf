@@ -2,16 +2,13 @@
 
 params.pair1 = "${PWD}/*_R1*.fastq"
 params.pair2 = "${PWD}/*_R2*.fastq"
-params.genome = "/s/angus/index/databases/bowtie2_indexes/mod_bos_taurus/mod_bos_taurus.fna"
-params.amr_db = "/s/angus/index/databases/MEGARes/megares_database.fasta"
-params.kraken_db = "/s/angus/index/databases/kraken_databases/Standard_kraken_10.14.db"
 params.threads = 1
 
 log.info "AmrPlusPlus - NF ~ version 1.0.0"
 log.info "================================"
-log.info "AMR Database       : ${params.amr_db}"
-log.info "Kraken Database    : ${params.kraken_db}"
-log.info "Host Genome        : ${params.genome}"
+log.info "AMR Database       : \${amr_db}"
+log.info "Kraken Database    : \${kraken_db}"
+log.info "Host Genome        : \${genome}"
 log.info "Forward Reads      : ${params.pair1}"
 log.info "Reverse Reads      : ${params.pair2}"
 log.info "Number of Threads  : ${params.threads}"
@@ -25,9 +22,9 @@ log.info "Kraken             : `whereis kraken`"
 log.info "\n"
 
 
-genome = file(params.genome)
-amr_db = file(params.amr_db)
-kraken_db = file(params.kraken_db)
+genome = file(\$genome)
+amr_db = file(\$amr_db)
+kraken_db = file(\$kraken_db)
 threads = params.threads
 
 if(!genome.exists()) {
