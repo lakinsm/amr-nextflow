@@ -17,6 +17,14 @@ log.info "Reverse Reads      : ${params.pair2}"
 log.info "Number of Threads  : ${params.threads}"
 log.info "\n"
 
+log.info "Program paths used:"
+log.info "Java               : `whereis java`"
+log.info "Bowtie2:           : `whereis bowtie2`"
+log.info "CoverageSampler    : `whereis csa`"
+log.info "Kraken             : `whereis kraken`"
+log.info "\n"
+
+
 genome = file(params.genome)
 amr_db = file(params.amr_db)
 kraken_db = file(params.kraken_db)
