@@ -3,7 +3,7 @@
 params.pair1 = "${PWD}/*_R1*.fastq"
 params.pair2 = "${PWD}/*_R2*.fastq"
 params.output = "${PWD}"
-params.threads = 1
+params.threads = 15
 
 process print_log {
 
