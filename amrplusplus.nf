@@ -2,6 +2,7 @@
 
 params.pair1 = "${PWD}/*_R1*.fastq"
 params.pair2 = "${PWD}/*_R2*.fastq"
+params.output = "${PWD}"
 params.threads = 1
 
 process print_log {
@@ -59,7 +60,7 @@ process trimmomatic_qc {
 }
 
 process bowtie2_genome_alignment {
-	publishDir 'sam_bam_output'
+	publishDir "${params.output}/sam_bam_output"
 	
 	input:
 	set dataset_id, file(forward), file(reverse) from read_files_genome
@@ -77,7 +78,7 @@ process bowtie2_genome_alignment {
 }
 
 process bowtie2_amr_alignment {
-	publishDir 'amr_output'
+	publishDir "${params.output}/amr_output"
 	
 	input:
 	set dataset_id, file(forward), file(reverse) from read_files_nonhost_amr
@@ -91,7 +92,7 @@ process bowtie2_amr_alignment {
 }
 
 process amr_coverage_sampler {
-	publishDir 'amr_output'
+	publishDir "${params.output}/amr_output"
 	
 	input:
 	set dataset_id, file(amr_sam_alignment) from amr_sam_files
@@ -105,7 +106,7 @@ process amr_coverage_sampler {
 }
 
 process kraken_classification {
-	publishDir 'kraken_output'
+	publishDir "${params.output}/kraken_output"
 
 	input:
 	set dataset_id, file(forward), file(reverse) from read_files_nonhost_kraken
