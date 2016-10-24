@@ -81,7 +81,6 @@ process bowtie2_amr_alignment {
 	
 	input:
 	set dataset_id, file(forward), file(reverse) from read_files_nonhost_amr
-	file index from amr_db.first()
 
 	output:
 	set dataset_id, file('amr_alignment.sam') into amr_sam_files
@@ -96,7 +95,6 @@ process amr_coverage_sampler {
 	
 	input:
 	set dataset_id, file(amr_sam_alignment) from amr_sam_files
-	file amrdb from amr_db
 
 	output:
 	set dataset_id, file('coverage_sampler_amr.tab') into amr_csa_files
@@ -111,7 +109,6 @@ process kraken_classification {
 
 	input:
 	set dataset_id, file(forward), file(reverse) from read_files_nonhost_kraken
-	file kdb from kraken_db
 
 	output:
 	set dataset_id, file('kraken.raw') into kraken_raw
