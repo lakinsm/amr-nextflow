@@ -54,7 +54,8 @@ process trimmomatic_qc {
         set dataset_id, file('trimmed_forward.fastq'), file('trimmed_reverse.fastq') into read_files_genome, read_files_amr, read_files_kraken
 
         """
-        java -jar /s/angus/index/common/tools/Trimmomatic-0-1.32/trimmomatic-0.32.jar PE -threads ${threads} -phred33 ${forward} ${reverse} trimmed_forward.fastq 1U.fastq trimmed_reverse.fastq 2U.fastq ILLUMINACLIP:/s/angus/index/common/tools/Trimmomatic-0-1.32/adapters/TruSeq3-PE.fa:2:30:10:3:TRUE LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+        #!/usr/bin/env bash
+        java -jar \$trim_path/trimmomatic-0.32.jar PE -threads ${threads} -phred33 ${forward} ${reverse} trimmed_forward.fastq 1U.fastq trimmed_reverse.fastq 2U.fastq ILLUMINACLIP:\$trim_path/adapters/TruSeq3-PE.fa:2:30:10:3:TRUE LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
         """
 }
 
@@ -70,7 +71,8 @@ process bowtie2_genome_alignment {
 	set dataset_id, file('nonhost_forward.fastq'), file('nonhost_reverse.fastq') into read_files_nonhost_amr, read_files_nonhost_kraken
 
 	"""
-	bowtie2 -p ${threads} -x \${genome} -1 ${forward} -2 ${reverse} -S host_alignment.sam
+	#!/usr/bin/env bash
+	bowtie2 -p ${threads} -x \$genome -1 ${forward} -2 ${reverse} -S host_alignment.sam
 	samtools view -h -f 4 -b host_alignment.sam > nonhost_alignment.bam
 	bamToFastq -i nonhost_alignment.bam -fq nonhost_forward.fastq -fq2 nonhost_reverse.fastq
 	"""
@@ -86,7 +88,8 @@ process bowtie2_amr_alignment {
 	set dataset_id, file('amr_alignment.sam') into amr_sam_files
 
 	"""
-	bowtie2 -p ${threads} -x \${amr_db} -1 $forward -2 $reverse -S amr_alignment.sam
+	#!/usr/bin/env bash
+	bowtie2 -p ${threads} -x \$amr_db -1 $forward -2 $reverse -S amr_alignment.sam
 	"""
 }
 
@@ -100,7 +103,8 @@ process amr_coverage_sampler {
 	set dataset_id, file('coverage_sampler_amr.tab') into amr_csa_files
 
 	"""
-	csa -ref_fp \$amrdb -sam_fp $amr_sam_alignment -min 100 -max 100 -skip 5 -t 80 -samples 1 -out_fp coverage_sampler_amr.tab
+	#!/usr/bin/env bash
+	csa -ref_fp \$amr_db -sam_fp $amr_sam_alignment -min 100 -max 100 -skip 5 -t 80 -samples 1 -out_fp coverage_sampler_amr.tab
 	"""
 }
 
@@ -115,8 +119,9 @@ process kraken_classification {
 	set dataset_id, file('kraken.report') into kraken_report
 
 	"""
-	kraken --preload --db \${kraken_db} --threads ${threads} --fastq-input --paired ${forward} ${reverse} > kraken.raw
-	kraken-report -db \${kraken_db} kraken.raw > kraken.report
+	#!/usr/bin/env bash
+	kraken --preload --db \$kraken_db --threads ${threads} --fastq-input --paired ${forward} ${reverse} > kraken.raw
+	kraken-report -db \$kraken_db kraken.raw > kraken.report
 	"""
 }
 
