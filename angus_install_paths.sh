@@ -6,7 +6,7 @@
 [[ ":$PATH:" != *":/s/angus/index/common/tools/csa:"* ]] && PATH="/s/angus/index/common/tools/csa:${PATH}"
 [[ ":$PATH:" != *":/s/angus/index/common/tools/csa:"* ]] && PATH="/s/angus/index/common/tools/csa:${PATH}"
 
-echo 'PATH="${PATH}"' >> ${HOME}/.bashrc
+echo "PATH=${PATH}" >> ${HOME}/.bashrc
 
 if [[ ! $genome ]]; then echo 'genome="/s/angus/index/databases/bowtie2_indexes/mod_bos_taurus/mod_bos_taurus.fna"' >> ${HOME}/.bashrc; fi
 if [[ ! $amr_db ]]; then echo 'amr_db="/s/angus/index/databases/MEGARes/megares_database.fasta"' >> ${HOME}/.bashrc; fi
