@@ -122,11 +122,12 @@ process kraken_classification {
 	set dataset_id, file('kraken.raw') into kraken_raw
 	set dataset_id, file('kraken.report') into kraken_report
 
-	"""
+	shell:
+	'''
 	#!/usr/bin/env bash
-	kraken --preload --threads ${threads} --fastq-input --paired ${forward} ${reverse} > kraken.raw
+	kraken --preload --threads !{threads} --fastq-input --paired !{forward} !{reverse} > kraken.raw
 	kraken-report kraken.raw > kraken.report
-	"""
+	'''
 }
 
 def pathToDatasetID(path) {
