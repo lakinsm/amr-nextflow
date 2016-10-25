@@ -21,7 +21,7 @@ Number of Threads  : ${params.threads}
 
 Program paths used:
 Java               : `whereis java`
-Bowtie2:           : `whereis bowtie2`
+BWA:               : `whereis bwa-mem`
 CoverageSampler    : `whereis csa`
 Kraken             : `whereis kraken`
 "
@@ -49,19 +49,21 @@ params.read_pairs.into {
 
 process trimmomatic_qc {
 	maxForks 2
+	publishDir "${params.output}/trimmomatic_output"
 
         input:
         set dataset_id, file(forward), file(reverse) from read_files_trimmed
 
         output:
-        set dataset_id, file('trimmed_forward.fastq'), file('trimmed_reverse.fastq') into read_files_genome, read_files_amr, read_files_kraken
+        set dataset_id, file("${dataset_id}_trimmed_forward.fastq"), file("${dataset_id}_trimmed_reverse.fastq") into read_files_genome, read_files_amr, read_files_kraken
+	set dataset_id, file("${dataset_id}_unpaired_forward.fastq"), file("${dataset_id}_unpaired_reverse.fastq") into unpaired_files_genome, unpaired_files_amr
 
         """
-        java -jar ${TRIM_PATH}/trimmomatic-0.32.jar PE -threads ${threads} -phred33 ${forward} ${reverse} trimmed_forward.fastq 1U.fastq trimmed_reverse.fastq 2U.fastq ILLUMINACLIP:${TRIM_PATH}/adapters/TruSeq3-PE.fa:2:30:10:3:TRUE LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+        java -jar ${TRIM_PATH}/trimmomatic-0.32.jar PE -threads ${threads} -phred33 ${forward} ${reverse} ${dataset_id}_trimmed_forward.fastq ${dataset_id}_unpaired_forward.fastq ${dataset_id}_trimmed_reverse.fastq ${dataset_id}_unpaired_reverse.fastq ILLUMINACLIP:${TRIM_PATH}/adapters/TruSeq3-PE.fa:2:30:10:3:TRUE LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
         """
 }
 
-process bowtie2_genome_alignment {
+process bwa_genome_alignment {
 	maxForks 1
 	publishDir "${params.output}/sam_bam_output"
 	
@@ -72,7 +74,7 @@ process bowtie2_genome_alignment {
 	set dataset_id, file("${dataset_id}_host_alignment.sam") into genome_sam_files
 	
 	"""
-	bowtie2 -p ${threads} -x ${GENOME} -1 ${forward} -2 ${reverse} -S ${dataset_id}_host_alignment.sam
+	bwa mem -t ${threads} ${GENOME} ${forward} ${reverse} > ${dataset_id}_host_alignment.sam
 	"""
 }
 
@@ -84,16 +86,18 @@ process samtools_view_to_fastq {
 	set dataset_id, file(host_alignment) from genome_sam_files
 
 	output:
-	set dataset_id, file("${dataset_id}_nonhost_alignment.bam") into nonhost_bam_files
+	set dataset_id, file("${dataset_id}_nonhost_sorted.bam") into nonhost_bam_files
 	set dataset_id, file("${dataset_id}_nonhost_forward.fastq"), file("${dataset_id}_nonhost_reverse.fastq") into read_files_nonhost_amr, read_files_nonhost_kraken
 
 	"""
-	samtools view -h -f 4 -b ${host_alignment} > ${dataset_id}_nonhost_alignment.bam
-	bamToFastq -i nonhost_alignment.bam -fq ${dataset_id}_nonhost_forward.fastq -fq2 ${dataset_id}_nonhost_reverse.fastq
+	samtools view -hbS ${host_alignment} > ${dataset_id}_host_alignment.bam
+	samtools sort --threads ${threads} ${dataset_id}_host_alignment.bam > ${dataset_id}_host_sorted.bam
+	samtools view -h -f 4 -b ${dataset_id}_host_sorted.bam > ${dataset_id}_nonhost_sorted.bam
+	bamToFastq -i ${dataset_id}_nonhost_sorted.bam -fq ${dataset_id}_nonhost_forward.fastq -fq2 ${dataset_id}_nonhost_reverse.fastq
 	"""
 }
 
-process bowtie2_amr_alignment {
+process bwa_amr_alignment {
 	maxForks 1
 	publishDir "${params.output}/amr_output"
 	
@@ -104,7 +108,7 @@ process bowtie2_amr_alignment {
 	set dataset_id, file("${dataset_id}_amr_alignment.sam") into amr_sam_files
 	
 	"""
-	bowtie2 -p ${threads} -x ${AMR_DB} -1 ${forward} -2 ${reverse} -S ${dataset_id}_amr_alignment.sam
+	bwa mem -t ${threads} ${AMR_DB} ${forward} ${reverse} > ${dataset_id}_amr_alignment.sam
 	"""
 }
 
