@@ -41,7 +41,7 @@ reverse_reads = Channel
 
 params.read_pairs = forward_reads
 	     .phase(reverse_reads)
-             	.map { pair1, pair2 -> [ pathToDatasetID(pair1[1]), pair1[1], pair2[1] ] }
+             	.map { pair1, pair2 -> [ extractSampleName(pair1[1]), pair1[1], pair2[1] ] }
 
 params.read_pairs.into {
 	read_files_trimmed
@@ -69,10 +69,10 @@ process bowtie2_genome_alignment {
 	set dataset_id, file(forward), file(reverse) from read_files_genome
 
 	output:
-	set dataset_id, file('host_alignment.sam') into genome_sam_files
+	set dataset_id, file("${dataset_id}_host_alignment.sam") into genome_sam_files
 	
 	"""
-	bowtie2 -p ${threads} -x ${GENOME} -1 ${forward} -2 ${reverse} -S host_alignment.sam
+	bowtie2 -p ${threads} -x ${GENOME} -1 ${forward} -2 ${reverse} -S ${dataset_id}_host_alignment.sam
 	"""
 }
 
@@ -84,12 +84,12 @@ process samtools_view_to_fastq {
 	set dataset_id, file(host_alignment) from genome_sam_files
 
 	output:
-	set dataset_id, file('nonhost_alignment.bam') into nonhost_bam_files
-	set dataset_id, file('nonhost_forward.fastq'), file('nonhost_reverse.fastq') into read_files_nonhost_amr, read_files_nonhost_kraken
+	set dataset_id, file("${dataset_id}_nonhost_alignment.bam") into nonhost_bam_files
+	set dataset_id, file("${dataset_id}_nonhost_forward.fastq"), file("${dataset_id}_nonhost_reverse.fastq") into read_files_nonhost_amr, read_files_nonhost_kraken
 
 	"""
-	samtools view -h -f 4 -b ${host_alignment} > nonhost_alignment.bam
-	bamToFastq -i nonhost_alignment.bam -fq nonhost_forward.fastq -fq2 nonhost_reverse.fastq
+	samtools view -h -f 4 -b ${host_alignment} > ${dataset_id}_nonhost_alignment.bam
+	bamToFastq -i nonhost_alignment.bam -fq ${dataset_id}_nonhost_forward.fastq -fq2 ${dataset_id}_nonhost_reverse.fastq
 	"""
 }
 
@@ -101,10 +101,10 @@ process bowtie2_amr_alignment {
 	set dataset_id, file(forward), file(reverse) from read_files_nonhost_amr
 
 	output:
-	set dataset_id, file('amr_alignment.sam') into amr_sam_files
+	set dataset_id, file("${dataset_id}_amr_alignment.sam") into amr_sam_files
 	
 	"""
-	bowtie2 -p ${threads} -x ${AMR_DB} -1 ${forward} -2 ${reverse} -S amr_alignment.sam
+	bowtie2 -p ${threads} -x ${AMR_DB} -1 ${forward} -2 ${reverse} -S ${dataset_id}_amr_alignment.sam
 	"""
 }
 
@@ -116,10 +116,10 @@ process amr_coverage_sampler {
 	set dataset_id, file(amr_sam_alignment) from amr_sam_files
 
 	output:
-	set dataset_id, file('coverage_sampler_amr.tab') into amr_csa_files
+	set dataset_id, file("${dataset_id}_coverage_sampler_amr.tab") into amr_csa_files
 
 	"""
-	csa -ref_fp ${AMR_DB} -sam_fp ${amr_sam_alignment} -min 100 -max 100 -skip 5 -t 80 -samples 1 -out_fp coverage_sampler_amr.tab
+	csa -ref_fp ${AMR_DB} -sam_fp ${amr_sam_alignment} -min 100 -max 100 -skip 5 -t 80 -samples 1 -out_fp ${dataset_id}_coverage_sampler_amr.tab
 	"""
 }
 
@@ -131,15 +131,17 @@ process kraken_classification {
 	set dataset_id, file(forward), file(reverse) from read_files_nonhost_kraken
 
 	output:
-	set dataset_id, file('kraken.raw') into kraken_raw
-	set dataset_id, file('kraken.report') into kraken_report
+	set dataset_id, file("${dataset_id}_kraken.raw") into kraken_raw
+	set dataset_id, file("${dataset_id}_kraken.report") into kraken_report
 
 	"""
-	kraken --preload --threads ${threads} --fastq-input --paired ${forward} ${reverse} > kraken.raw
-	kraken-report kraken.raw > kraken.report
+	kraken --preload --threads ${threads} --fastq-input --paired ${forward} ${reverse} > ${dataset_id}_kraken.raw
+	kraken-report kraken.raw > ${dataset_id}_kraken.report
 	"""
 }
 
-def pathToDatasetID(path) {
-  	return path.getParent().toString();
+def extractSampleName(s) {
+	ret = s =~ /\/(.+)_R/;
+	basepath = ~/.+\//
+  	return ret[0][1] - basepath;
 }
