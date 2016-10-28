@@ -149,7 +149,6 @@ process amr_aggregate_results {
 	publishDir "${params.output}"
 	cache false
 	
-	
 	input:
 	set dataset_id, file(amr_file) from amr_csa_files
 	
@@ -161,7 +160,6 @@ process amr_aggregate_results {
 process kraken_aggregate_results {
 	maxForks 1
 	cache false
-	
 	
 	input:
 	set dataset_id, file(kraken_report_file) from kraken_report
