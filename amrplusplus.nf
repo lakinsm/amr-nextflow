@@ -140,7 +140,7 @@ process kraken_classification {
 
 	"""
 	kraken --preload --threads ${threads} --fastq-input --paired ${forward} ${reverse} > ${dataset_id}_kraken.raw
-	kraken-report kraken.raw > ${dataset_id}_kraken.report
+	kraken-report ${dataset_id}_kraken.raw > ${dataset_id}_kraken.report
 	"""
 }
 

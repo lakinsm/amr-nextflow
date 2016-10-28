@@ -42,7 +42,8 @@ def amr_aggregate_results(file, A, L, N):
         ))
 
 
-# def kraken_aggregate_results(outpath)
+def kraken_aggregate_results(file):
+    pass
 
 if __name__ == '__main__':
     if sys.argv[1] == 'AMR':
