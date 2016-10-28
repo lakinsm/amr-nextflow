@@ -35,3 +35,7 @@
 # Misc
 testing*
 coverage_sampler*
+
+# IDE files python
+.idea*
+

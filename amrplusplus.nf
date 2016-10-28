@@ -144,8 +144,26 @@ process kraken_classification {
 	"""
 }
 
+process amr_aggregate_results {
+	maxForks 1
+	publishDir "${params.output}"
+	cache false
+	
+	
+	input:
+	set dataset_id, file(amr_file) from amr_csa_files
+	
+	output:
+	file("AMR_aggregated_output.csv")
+	
+	"""
+	nextflow_aggregate_results.py AMR ${AMR_ANNOT} ${params.output} ${amr_file}
+	"""
+}
+
 def extractSampleName(s) {
 	ret = s =~ /\/(.+)_R/;
 	basepath = ~/.+\//
   	return ret[0][1] - basepath;
 }
+
