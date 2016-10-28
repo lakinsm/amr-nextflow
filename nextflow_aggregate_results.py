@@ -33,7 +33,7 @@ def amr_aggregate_results(outpath, file, A, L, N):
                     long_results[l] = float(result[4])
                 else:
                     long_results[l] += float(result[4])
-    with open(outpath + '/AMR_aggregated_output.csv', 'wa') as out:
+    with open(outpath + '/AMR_aggregated_output.csv', 'a') as out:
         for name, count in long_results.items():
             out.write('{},{},{},{}\n'.format(
                 N[L[name]],
