@@ -161,6 +161,23 @@ process amr_aggregate_results {
 	"""
 }
 
+process kraken_aggregate_results {
+	maxForks 1
+	publishDir "${params.output}"
+	cache false
+	
+	
+	input:
+	set dataset_id, file(kraken_report_file) from kraken_report
+	
+	output:
+	file("kraken_aggregated_output.csv")
+	
+	"""
+	nextflow_aggregate_results.py kraken ${kraken_report_file} >> kraken_aggregated_output.csv
+	"""
+}
+
 def extractSampleName(s) {
 	ret = s =~ /\/(.+)_R/;
 	basepath = ~/.+\//
