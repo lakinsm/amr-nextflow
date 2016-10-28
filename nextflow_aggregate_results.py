@@ -19,7 +19,7 @@ def load_megares_annotations(file):
     return annot, levels
 
 
-def amr_aggregate_results(outpath, file, A, L, N):
+def amr_aggregate_results(file, A, L, N):
     long_results = {}
     sample_id = file.split('/')[-1].replace('_coverage_sampler_amr.tab', '')
     with open(file, 'r') as f:
@@ -33,14 +33,13 @@ def amr_aggregate_results(outpath, file, A, L, N):
                     long_results[l] = float(result[4])
                 else:
                     long_results[l] += float(result[4])
-    with open(outpath + '/AMR_aggregated_output.csv', 'a') as out:
-        for name, count in long_results.items():
-            out.write('{},{},{},{}\n'.format(
-                N[L[name]],
-                sample_id,
-                name,
-                count
-            ))
+    for name, count in long_results.items():
+        sys.stdout.write('{},{},{},{}\n'.format(
+            N[L[name]],
+            sample_id,
+            name,
+            count
+        ))
 
 
 # def kraken_aggregate_results(outpath)
@@ -48,7 +47,7 @@ def amr_aggregate_results(outpath, file, A, L, N):
 if __name__ == '__main__':
     if sys.argv[1] == 'AMR':
         A, L = load_megares_annotations(sys.argv[2])
-        amr_aggregate_results(sys.argv[3], sys.argv[4], A, L, amr_level_names)
+        amr_aggregate_results(sys.argv[3], A, L, amr_level_names)
     elif sys.argv[1] == "kraken":
         pass  # filler
     else:

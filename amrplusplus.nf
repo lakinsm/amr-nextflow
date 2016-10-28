@@ -157,7 +157,7 @@ process amr_aggregate_results {
 	file("AMR_aggregated_output.csv")
 	
 	"""
-	nextflow_aggregate_results.py AMR ${AMR_ANNOT} ${params.output} ${amr_file}
+	nextflow_aggregate_results.py AMR ${AMR_ANNOT} ${params.output} ${amr_file} >> AMR_aggregated_output.csv
 	"""
 }
 
