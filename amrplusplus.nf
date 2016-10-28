@@ -153,28 +153,21 @@ process amr_aggregate_results {
 	input:
 	set dataset_id, file(amr_file) from amr_csa_files
 	
-	output:
-	file("AMR_aggregated_output.csv")
-	
 	"""
-	nextflow_aggregate_results.py AMR ${AMR_ANNOT} ${amr_file} >> AMR_aggregated_output.csv
+	nextflow_aggregate_results.py AMR ${AMR_ANNOT} ${amr_file} >> ${params.output}/AMR_aggregated_output.csv
 	"""
 }
 
 process kraken_aggregate_results {
 	maxForks 1
-	publishDir "${params.output}"
 	cache false
 	
 	
 	input:
 	set dataset_id, file(kraken_report_file) from kraken_report
 	
-	output:
-	file("kraken_aggregated_output.csv")
-	
 	"""
-	nextflow_aggregate_results.py kraken ${kraken_report_file} >> kraken_aggregated_output.csv
+	nextflow_aggregate_results.py kraken ${kraken_report_file} >> ${params.output}/kraken_aggregated_output.csv
 	"""
 }
 
