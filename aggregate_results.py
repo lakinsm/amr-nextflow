@@ -35,7 +35,12 @@ def amr_aggregate_results(outpath, A, L, N):
                         if l not in long_results:
                             long_results[l] = float(result[4])
                         else:
-                            long_results[l] = long_results[l] + float(result[4])
+                            long_results[l] += float(result[4])
+                    out.write('Gene,{},{},{}\n'.format(
+                        sample_id,
+                        result[2],
+                        result[4]
+                    ))
             for name, count in long_results.items():
                 out.write('{},{},{},{}\n'.format(
                     N[L[name]],
