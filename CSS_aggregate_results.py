@@ -15,13 +15,12 @@ def dict_to_matrix(D):
                 unique_nodes.append(taxon)
     nrow = len(unique_nodes)
     ret = np.zeros((nrow, ncol), dtype=np.float)
+    print(nrow, ncol)
     for i, (sample, tdict) in enumerate(D.items()):
         for j, taxon in enumerate(unique_nodes):
             if taxon in tdict:
-                ret[i, j] = tdict[taxon]
+                ret[i, j] = np.float(tdict[taxon])
     return ret
-
-
 
 
 def load_kraken_results(dirpath):
@@ -52,7 +51,7 @@ def load_kraken_results(dirpath):
 
 def calculate_css_norm_factors(K):
     M = dict_to_matrix(K)
-    print(list(M.sum(axis=1)))
+    print(M.sum(axis=1))
 
 
 if __name__ == '__main__':
