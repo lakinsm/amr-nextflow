@@ -17,6 +17,7 @@ def load_kraken_results(dirpath):
             for entry in data:
                 if not entry:
                     continue
+                entry = entry.split()
                 if entry[3] in ('-', 'U'):
                     continue
                 print(entry[3])
