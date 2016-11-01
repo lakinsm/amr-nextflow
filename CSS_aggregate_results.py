@@ -10,7 +10,7 @@ taxa_level = {'D': 0, 'P': 1, 'C': 2, 'O':3, 'F': 4, 'G': 5, 'S': 6}
 def load_kraken_results(dirpath):
     ret = {}
     for file in glob.glob(dirpath + '/kraken_output/*.report'):
-        sample_id = file.split('/')[-1].replace('_kraken.report')
+        sample_id = file.split('/')[-1].replace('_kraken.report', '')
         with open(file, 'r') as f:
             data = f.read().split('\n')
             current_taxon = []
