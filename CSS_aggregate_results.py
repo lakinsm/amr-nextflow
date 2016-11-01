@@ -18,9 +18,9 @@ def dict_to_matrix(D):
     for i, (sample, tdict) in enumerate(D.items()):
         for j, taxon in enumerate(unique_nodes):
             if taxon in tdict:
-                ret[i][j] = tdict[taxon]
+                ret[i, j] = tdict[taxon]
             else:
-                ret[i][j] = 0
+                ret[i, j] = 0
     return ret
 
 
