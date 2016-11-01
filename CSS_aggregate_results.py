@@ -10,7 +10,7 @@ def dict_to_matrix(D):
     ncol = len(D.keys())
     unique_nodes = []
     for sample, tdict in D.items():
-        for taxon in tdict.values():
+        for taxon in tdict.keys():
             if taxon not in unique_nodes:
                 unique_nodes.append(taxon)
     nrow = len(unique_nodes)
@@ -19,7 +19,6 @@ def dict_to_matrix(D):
     for i, (sample, tdict) in enumerate(D.items()):
         print(i, sample)
         for j, taxon in enumerate(unique_nodes):
-            print(j, taxon)
             if taxon in tdict:
                 print(tdict[taxon])
                 ret[i, j] = np.float(tdict[taxon])
