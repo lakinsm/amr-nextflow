@@ -53,7 +53,8 @@ def load_kraken_results(dirpath):
 
 
 def calculate_css_norm_factors(K):
-
+    M = dict_to_matrix(K)
+    print(M)
 
 
 if __name__ == '__main__':
