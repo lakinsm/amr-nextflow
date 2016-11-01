@@ -4,7 +4,7 @@ import sys
 import glob
 import numpy as np
 
-taxa_level = {'D': 0, 'P': 1, 'C': 2, 'O':3, 'F': 4, 'G': 5, 'S': 6}
+taxa_level = {'D': 0, 'P': 1, 'C': 2, 'O': 3, 'F': 4, 'G': 5, 'S': 6}
 
 
 def load_kraken_results(dirpath):
@@ -23,6 +23,8 @@ def load_kraken_results(dirpath):
                 node_name = ' '.join(entry[5:])
                 current_taxon = current_taxon[:taxa_level[entry[3]]]
                 current_taxon.append(node_name)
+                if float(entry[2]) == 0:
+                    continue
                 taxon_name = '|'.join(current_taxon)
                 try:
                     ret[sample_id].setdefault(taxon_name, float(entry[2]))
