@@ -7,6 +7,7 @@ import numpy as np
 np.set_printoptions(suppress=True)
 taxa_level = {'D': 0, 'P': 1, 'C': 2, 'O': 3, 'F': 4, 'G': 5, 'S': 6}
 
+
 def dict_to_matrix(D):
     ncol = len(D.keys())
     unique_nodes = []
@@ -52,7 +53,9 @@ def load_kraken_results(dirpath):
 
 def calculate_css_norm_factors(K):
     M = dict_to_matrix(K)
-    print(M.sum(axis=1))
+    for sample in M.T:
+        positives = np.sort(np.array(sample[sample > 0]))
+        
 
 
 if __name__ == '__main__':
