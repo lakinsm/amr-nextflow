@@ -19,6 +19,7 @@ def load_kraken_results(dirpath):
                     continue
                 if entry[3] in ('-', 'U'):
                     continue
+                print(entry[3])
                 current_taxon = current_taxon[:taxa_level[entry[3]]].append(entry[5])
                 taxon_name = '|'.join(current_taxon)
                 try:
