@@ -21,7 +21,7 @@ def load_kraken_results(dirpath):
                 if entry[3] in ('-', 'U'):
                     continue
                 current_taxon = current_taxon[:taxa_level[entry[3]]].append(entry[5])
-                print(current_taxon)
+                print(entry[5], current_taxon)
                 taxon_name = '|'.join(current_taxon)
                 try:
                     ret[sample_id].setdefault(taxon_name, float(entry[2]))
