@@ -4,6 +4,7 @@ import sys
 import glob
 import numpy as np
 
+np.set_printoptions(suppress=True)
 taxa_level = {'D': 0, 'P': 1, 'C': 2, 'O': 3, 'F': 4, 'G': 5, 'S': 6}
 
 def dict_to_matrix(D):
@@ -19,7 +20,6 @@ def dict_to_matrix(D):
     for j, (sample, tdict) in enumerate(D.items()):
         for i, taxon in enumerate(unique_nodes):
             if taxon in tdict:
-                print(tdict[taxon])
                 ret[i, j] = np.float(tdict[taxon])
     return ret
 
