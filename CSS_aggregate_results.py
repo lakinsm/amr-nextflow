@@ -94,13 +94,14 @@ def calculate_css_norm_factors(K):
     for j, sample in enumerate(M.T):
         positives = np.sort(np.array(sample[sample > 0]))
         l_iter = 0
-        slj = positives[0]
+        slj = positives[l_iter]
         while (float(slj) / sample_sums[j]) < l_chosen:
             try:
                 slj = positives[l_iter]
             except IndexError:
                 slj = positives[-1]
                 break
+            l_iter += 1
         qlj_ret[j] = slj
     return l_chosen, qlj_ret
 
