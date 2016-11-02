@@ -53,9 +53,13 @@ def load_kraken_results(dirpath):
 
 def calculate_css_norm_factors(K):
     M = dict_to_matrix(K)
-    for sample in M.T:
-        positives = np.sort(np.array(sample[sample > 0]))
-        
+    sample_sums = np.array(M.sum(axis=0))
+    print(sample_sums)
+    qlj = np.zeros(M.shape[1])  # A vector of quantiles for each sample
+    l_current = float(0.1)  # The starting point for choice of lth quantile
+    while l_current < 100:  # This will change to the stopping condition later
+        for sample in enumerate(M.T):
+            positives = np.sort(np.array(sample[sample > 0]))
 
 
 if __name__ == '__main__':
