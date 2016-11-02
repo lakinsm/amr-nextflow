@@ -61,6 +61,7 @@ def calculate_css_norm_factors(K):
     d_l_previous = np.zeros(M.shape[1])  # Initialize array for calculating stopping condition
     l_chosen = 0
     while l_current < 1:
+        print(l_current)
         # Calculate slj for each sample j
         for j, sample in enumerate(M.T):
             positives = np.sort(np.array(sample[sample > 0]))
