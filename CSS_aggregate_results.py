@@ -54,14 +54,12 @@ def load_kraken_results(dirpath):
 def calculate_css_norm_factors(K):
     M = dict_to_matrix(K)
     sample_sums = np.array(M.sum(axis=0))
-    print(sample_sums)
     qlj = np.zeros(M.shape[1])  # A vector of quantile values for each sample
     last_qlj_idx = [0] * M.shape[1]  # Keep track of where we left off last time
     l_current = float(0.01)  # The starting point for choice of lth quantile
     d_l_previous = np.zeros(M.shape[1])  # Initialize array for calculating stopping condition
     l_chosen = 0
     while l_current < 1:
-        print(l_current)
         # Calculate slj for each sample j
         for j, sample in enumerate(M.T):
             positives = np.sort(np.array(sample[sample > 0]))
@@ -85,7 +83,6 @@ def calculate_css_norm_factors(K):
         if l_current == 0.01:
             d_l_previous = d_l_current
         else:
-            print((d_l_current - d_l_previous), d_l_previous)
             if (d_l_current - d_l_previous) >= d_l_previous:
                 l_chosen = l_current - 0.01
                 if l_chosen < 0.5:
@@ -93,15 +90,26 @@ def calculate_css_norm_factors(K):
                 break
         # Try next choice of l
         l_current += 0.01
-        print(l_chosen)
-    print(l_chosen)
+    qlj_ret = np.zeros(M.shape[1])
+    for j, sample in enumerate(M.T):
+        positives = np.sort(np.array(sample[sample > 0]))
+        l_iter = 0
+        slj = positives[0]
+        while (float(slj) / sample_sums[j]) < l_chosen:
+            try:
+                slj = positives[l_iter]
+            except IndexError:
+                slj = positives[-1]
+                break
+        qlj_ret[j] = slj
+    return l_chosen, qlj_ret
 
 
 
 if __name__ == '__main__':
     K = load_kraken_results(sys.argv[1])
-    calculate_css_norm_factors(K)
-
+    l, slj = calculate_css_norm_factors(K)
+    print(l, slj)
 
 
 
