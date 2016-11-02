@@ -85,8 +85,8 @@ def calculate_css_norm_factors(K):
         if l_current == 0.01:
             d_l_previous = d_l_current
         else:
-            print((d_l_current - d_l_previous), 0.1 * d_l_previous)
-            if (d_l_current - d_l_previous) >= 0.1 * d_l_previous:
+            print((d_l_current - d_l_previous), d_l_previous)
+            if (d_l_current - d_l_previous) >= d_l_previous:
                 l_chosen = l_current - 0.01
                 if l_chosen < 0.5:
                     l_chosen = 0.5
