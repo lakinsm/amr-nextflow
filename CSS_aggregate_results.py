@@ -62,7 +62,7 @@ def calculate_css_norm_factors(K):
             positives = np.sort(np.array(sample[sample > 0]))
             l_iter = 0
             s_lj = positives[l_iter]
-            while (s_lj / sample_sums[j]) < l_current:
+            while (float(s_lj) / sample_sums[j]) < l_current:
                 l_iter += 1
                 s_lj = positives[l_iter]
             qlj[j] = s_lj
