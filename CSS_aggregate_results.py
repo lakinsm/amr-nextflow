@@ -58,25 +58,41 @@ def calculate_css_norm_factors(K):
     qlj = np.zeros(M.shape[1])  # A vector of quantile values for each sample
     last_qlj_idx = np.zeros(M.shape[1])  # Keep track of where we left off last time
     l_current = float(0.01)  # The starting point for choice of lth quantile
-    while l_current < 1:  # This will change to the stopping condition later
+    d_l_previous = np.zeros(M.shape[1])  # Initialize array for calculating stopping condition
+    l_chosen = 0
+    while l_current < 1:
+        # Calculate slj for each sample j
         for j, sample in enumerate(M.T):
             positives = np.sort(np.array(sample[sample > 0]))
             l_iter = last_qlj_idx[j]
             try:
-                s_lj = positives[l_iter]
-                while (float(s_lj) / sample_sums[j]) < l_current:
+                slj = positives[l_iter]
+                while (float(slj) / sample_sums[j]) < l_current:
                     l_iter += 1
                     try:
-                        s_lj = positives[l_iter]
+                        slj = positives[l_iter]
                     except IndexError:
-                        s_lj = positives[-1]
+                        slj = positives[-1]
                         break
             except IndexError:
-                s_lj = positives[-1]
+                slj = positives[-1]
             last_qlj_idx[j] = l_iter
-            qlj[j] = s_lj
+            qlj[j] = slj
+        # Calculate stopping criterion
+        qlmed = np.median(qlj)
+        d_l_current = np.median(np.abs(qlj - qlmed))
+        if l_current == 0.01:
+            d_l_previous = d_l_current
+        else:
+            if (d_l_current - d_l_previous) >= 0.1 * d_l_previous:
+                l_chosen = l_current - 0.01
+                if l_chosen < 0.5:
+                    l_chosen = 0.5
+                    break
+        # Try next choice of l
         l_current += 0.01
-        print(l_current, qlj)
+        print(l_chosen)
+    print(l_chosen)
 
 
 
