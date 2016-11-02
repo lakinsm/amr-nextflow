@@ -63,6 +63,7 @@ def calculate_css_norm_factors(K):
             l_iter = 0
             s_lj = positives[l_iter]
             while (float(s_lj) / sample_sums[j]) < l_current:
+                print(float(s_lj) / sample_sums[j])
                 l_iter += 1
                 s_lj = positives[l_iter]
             qlj[j] = s_lj
