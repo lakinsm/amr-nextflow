@@ -55,11 +55,19 @@ def calculate_css_norm_factors(K):
     M = dict_to_matrix(K)
     sample_sums = np.array(M.sum(axis=0))
     print(sample_sums)
-    qlj = np.zeros(M.shape[1])  # A vector of quantiles for each sample
-    l_current = float(0.1)  # The starting point for choice of lth quantile
-    while l_current < 100:  # This will change to the stopping condition later
-        for sample in enumerate(M.T):
+    qlj = np.zeros(M.shape[1])  # A vector of quantile values for each sample
+    l_current = float(0.01)  # The starting point for choice of lth quantile
+    while l_current < 1:  # This will change to the stopping condition later
+        for j, sample in enumerate(M.T):
             positives = np.sort(np.array(sample[sample > 0]))
+            l_iter = 0
+            s_lj = positives[l_iter]
+            while (s_lj / sample_sums[j]) < l_current:
+                l_iter += 1
+                s_lj = positives[l_iter]
+            qlj[j] = s_lj
+        l_current += 0.01
+    print(qlj)
 
 
 if __name__ == '__main__':
