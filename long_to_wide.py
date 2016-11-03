@@ -144,10 +144,10 @@ def output_kraken_analytic_data(outdir, M, m_names, n_names):
 if __name__ == '__main__':
     S, L = kraken_load_long_data(sys.argv[1])
     K, m, n = kraken_load_analytic_data(sys.argv[2])
-    output_wide_data(sys.argv[2], S, L)
     output_kraken_analytic_data(sys.argv[2], K, m, n)
+    output_wide_data(sys.argv[3], S, L)
     del S
     del L
-    S, L = amr_load_long_data(sys.argv[3])
-    output_wide_data(sys.argv[4], S, L)
+    S, L = amr_load_long_data(sys.argv[4])
+    output_wide_data(sys.argv[5], S, L)
 
