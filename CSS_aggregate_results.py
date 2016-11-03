@@ -191,6 +191,7 @@ if __name__ == '__main__':
     # Kraken data
     K = load_kraken_results(sys.argv[1])
     K_m, N, slj, m_names, s_names = calculate_css_norm_factors(K)
+    print(s_names)
     M_norm = normalize_matrix(K_m, N, slj)
     kraken_aggregate_and_output(sys.argv[1], M_norm, m_names, s_names)
     del M_norm, m_names, s_names
