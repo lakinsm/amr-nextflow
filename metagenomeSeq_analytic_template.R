@@ -19,6 +19,24 @@
 
 require(metagenomeSeq)
 
+# Load the data and MEGARes annotations
+kraken <- newMRexperiment(read.table('kraken_analytic_matrix.csv', header=T, row.names=1, sep=','))
+amr <- newMRexperiment(read.table('AMR_analytic_matrix.csv', header=T, row.names=1, sep=','))
+annotations <- read.csv('megares_annotations.csv', header=T)
+
+
+# Calculate normalization factors on the analytic data
+cumNorm(kraken)
+cumNorm(amr)
+
+
+# Extract the normalized counts into a new data frame for aggregation
+kraken_norm <- data.frame(MRcounts(kraken, norm=T))
+amr_norm <- data.frame(MRcoefs(amr, norm=T))
+
+
+# Aggregate the normalized counts for AMR using the annotations data frame
+
 
 
 
