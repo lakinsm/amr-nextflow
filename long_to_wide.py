@@ -30,6 +30,33 @@ def kraken_load_long_data(file):
     return samples, labels
 
 
+def kraken_load_long_css_data(file):
+    samples = {}
+    labels = {}
+    with open(file, 'r') as f:
+        data = f.read().split('\n')
+        for entry in data:
+            if not entry:
+                continue
+            entry = entry.split(',')
+            try:
+                samples[entry[0]][entry[1]][entry[2]] = float(entry[3])
+            except KeyError:
+                try:
+                    samples[entry[0]][entry[1]].setdefault(entry[2], float(entry[3]))
+                except KeyError:
+                    try:
+                        samples[entry[0]].setdefault(entry[1], {entry[2]: float(entry[3])})
+                    except KeyError:
+                        samples.setdefault(entry[0], {entry[1]: {entry[2]: float(entry[3])}})
+            try:
+                if entry[2] not in labels[entry[0]]:
+                    labels[entry[0]] += (entry[2],)
+            except KeyError:
+                labels.setdefault(entry[0], (entry[2],))
+    return samples, labels
+
+
 def amr_load_long_data(file):
     samples = {}
     labels = {}
@@ -80,5 +107,10 @@ if __name__ == '__main__':
     output_wide_data(sys.argv[2], S, L)
     del S
     del L
-    S, L = amr_load_long_data(sys.argv[3])
+    S, L = kraken_load_long_css_data(sys.argv[3])
     output_wide_data(sys.argv[4], S, L)
+    del S
+    del L
+    S, L = amr_load_long_data(sys.argv[5])
+    output_wide_data(sys.argv[6], S, L)
+
