@@ -73,7 +73,7 @@ def load_amr_results(dirpath):
     for file in glob.glob(dirpath + 'amr_output/*.tab'):
         sample_id = file.split('/')[-1].replace('_coverage_sampler_amr.tab', '')
         with open(file, 'r') as f:
-            data = f.read().split('\n')
+            data = f.read().split('\n')[1:]
             for entry in data:
                 if not entry:
                     continue
