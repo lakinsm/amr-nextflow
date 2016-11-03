@@ -204,8 +204,8 @@ if __name__ == '__main__':
     AMR = load_amr_results(sys.argv[1])
     A, L = load_megares_annotations(sys.argv[2])
     AMR_m, N, slj, m_names, s_names = calculate_css_norm_factors(AMR)
+    print(slj, N)
     M_norm = normalize_matrix(AMR_m, N, slj)
-    np.savetxt(sys.argv[1] + '/amr_test_mat.csv', M_norm, delimiter=',')
     amr_aggregate_and_output(sys.argv[1], M_norm, m_names, s_names, A, L)
 
 
