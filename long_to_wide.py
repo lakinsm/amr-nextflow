@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+## sys.argv:
+#   1. kraken_raw_output.csv
+#   2. nextflow_output folder
+#   3. kraken_count_matrices folder
+#   4. AMR_raw_output.csv
+#   5. amr_count_matrices folder
+
 import sys
 import glob
 import numpy as np
@@ -109,7 +116,7 @@ def amr_load_long_data(file):
 
 
 def output_wide_data(outdir, S, L):
-    with open(outdir + '/AMR_analytic_matrix.csv', 'w') as amr:
+    with open(outdir + '/../AMR_analytic_matrix.csv', 'w') as amr:
         for flevel, sdict in S.items():
             local_sample_names = []
             with open(outdir + '/' + flevel + '.csv', 'w') as out:
