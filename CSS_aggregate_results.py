@@ -157,6 +157,8 @@ def kraken_aggregate_and_output(dirpath, M, m_names, n_names):
     with open(dirpath + '/kraken_css_normalized_output.csv', 'w') as out:
         for feature, row in ret.items():
             for j, count in enumerate(row):
+                if count == 0:
+                    continue
                 out.write('{},{},{},{}\n'.format(
                     taxa_level_names[len(feature.split('|'))],
                     n_names[j],
@@ -181,6 +183,8 @@ def amr_aggregate_and_output(dirpath, M, m_names, n_names, A, L):
     with open(dirpath + '/amr_css_normalized_output.csv', 'w') as out:
         for feature, row in ret.items():
             for j, count in enumerate(row):
+                if count == 0:
+                    continue
                 out.write('{},{},{},{}\n'.format(
                     level_dict[feature],
                     n_names[j],
