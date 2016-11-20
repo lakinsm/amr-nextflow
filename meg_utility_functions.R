@@ -225,7 +225,146 @@ meg_heatmap <- function(data_list,
 }
 
 
-
+meg_alpha_rarefaction <- function(data_list,
+                                  data_names,
+                                  metadata,
+                                  sample_var,
+                                  group_var,
+                                  outdir,
+                                  data_type) {
+    all_alphadiv <- data.table(ID=character(),
+                               Level=character(),
+                               Value=numeric())
+    all_species_raw <- data.table(ID=character(),
+                                  Level=character(),
+                                  Value=numeric())
+    all_species_rare <- data.table(ID=character(),
+                                   Level=character(),
+                                   Value=numeric())
+    for( l in 1:length(data_list) ) {
+        local_obj <- alpha_rarefaction(MRcounts(data_list[[l]]))
+        if(l == 1) test <<- local_obj
+        all_alphadiv <- rbind(all_alphadiv, data.table(ID=names(local_obj$alphadiv),
+                                                       Level=rep(data_names[l],
+                                                                 length(local_obj$alphadiv)),
+                                                       Value=as.numeric(local_obj$alphadiv)))
+        all_species_raw <- rbind(all_species_raw, data.table(ID=names(local_obj$raw_species_abundance),
+                                                             Level=rep(data_names[l],
+                                                                       length(local_obj$raw_species_abundance)),
+                                                             Value=as.numeric(local_obj$raw_species_abundance)))
+        all_species_rare <- rbind(all_species_rare, data.table(ID=names(local_obj$rarefied_species_abundance),
+                                                               Level=rep(data_names[l],
+                                                                         length(local_obj$rarefied_species_abundance)),
+                                                               Value=as.numeric(local_obj$rarefied_species_abundance)))
+    }
+    
+    all_alphadiv <- within(all_alphadiv, Level
+                           <- factor(Level, levels=data_names,
+                                     ordered=T))
+    all_species_raw <- within(all_species_raw, Level
+                              <- factor(Level, levels=data_names,
+                                        ordered=T))
+    all_species_rare <- within(all_species_rare, Level
+                               <- factor(Level, levels=data_names,
+                                         ordered=T))
+    setkey(all_alphadiv, ID)
+    setkey(all_species_raw, ID)
+    setkey(all_species_rare, ID)
+    
+    all_alphadiv <- metadata[all_alphadiv]
+    all_species_raw <- metadata[all_species_raw]
+    all_species_rare <- metadata[all_species_rare]
+    
+    alphadiv_type_sums <- all_alphadiv[Level==data_names[2], median(Value), by=group_var]
+    alphadiv_value_labels <- as.character(alphadiv_type_sums[[group_var]][order(alphadiv_type_sums$V1, decreasing=T)])
+    
+    species_raw_type_sums <- all_species_raw[Level==data_names[2], median(Value), by=group_var]
+    species_raw_value_labels <- as.character(species_raw_type_sums[[group_var]][order(species_raw_type_sums$V1,
+                                                                                decreasing=T)])
+    species_rare_type_sums <- all_species_rare[Level==data_names[2], median(Value), by=group_var]
+    species_rare_value_labels <- as.character(species_rare_type_sums[[group_var]][order(species_rare_type_sums$V1,
+                                                                                       decreasing=T)])
+    
+    all_alphadiv[[group_var]] <- factor(all_alphadiv[[group_var]],
+                                     levels=alphadiv_value_labels, ordered=T)
+    
+    all_species_raw[[group_var]] <- factor(all_species_raw[[group_var]],
+                              levels=species_raw_value_labels, ordered=T)
+    
+    all_species_rare[[group_var]] <- factor(all_species_rare[[group_var]],
+                               levels=species_rare_value_labels, ordered=T)
+    
+    png(filename=paste(outdir, '/', data_type, '_alphadiversity_by_', group_var, '.png',
+                       sep='', collapse=''),
+        width=1024, height=768)
+    g_alphadiv <- ggplot(data=all_alphadiv, aes_string(x=group_var,
+                             y='Value',
+                             color=group_var)) +
+        geom_boxplot(size=1) + 
+        facet_wrap(~Level, nrow=2, scales='free_y')
+    g_alphadiv <- g_alphadiv +
+        ggtitle(paste('Alpha Diversity by ', group_var, ' for Rarefied data\nInverse Simpson Index',
+                      sep='', collapse='')) +
+        ylab('Inverse Simpson\'s Index\n') +
+        xlab(paste('\n', group_var, sep='', collapse='')) +
+        theme(strip.text.x=element_text(size=26),
+              axis.text.y=element_text(size=20),
+              axis.text.x=element_blank(),
+              axis.title.x=element_text(size=26),
+              axis.title.y=element_text(size=26, vjust=1),
+              #legend.position="right",
+              legend.title=element_text(size=24, vjust=1),
+              legend.text=element_text(size=20),
+              plot.title=element_text(size=30, hjust=0.5))
+    print(g_alphadiv)
+    dev.off()
+    
+    png(filename=paste(outdir, '/', data_type, '_raw_richness_by_', group_var, '.png',
+                       sep='', collapse=''),
+        width=1024, height=768)
+    g_sraw <- ggplot(data=all_species_raw, aes_string(group_var, 'Value', color=group_var)) +
+        geom_boxplot(size=1) + 
+        facet_wrap(~Level, nrow=2, scales='free_y')
+    g_sraw <- g_sraw +
+        ggtitle(paste('Species Richness by ', group_var, ' for Raw data\nInverse Simpson Index',
+                      sep='', collapse='')) +
+        ylab('Unique Species\n') +
+        xlab(paste('\n', group_var, sep='', collapse='')) +
+        theme(strip.text.x=element_text(size=26),
+              axis.text.y=element_text(size=20),
+              axis.text.x=element_blank(),
+              axis.title.x=element_text(size=26),
+              axis.title.y=element_text(size=26, vjust=1),
+              #legend.position="right",
+              legend.title=element_text(size=24, vjust=1),
+              legend.text=element_text(size=20),
+              plot.title=element_text(size=30, hjust=0.5))
+    print(g_sraw)
+    dev.off()
+    
+    png(filename=paste(outdir, '/', data_type, '_rarefied_richness_by_', group_var, '.png',
+                       sep='', collapse=''),
+        width=1024, height=768)
+    g_srare <- ggplot(data=all_species_rare, aes_string(group_var, 'Value', color=group_var)) +
+        geom_boxplot(size=1) + 
+        facet_wrap(~Level, nrow=2, scales='free_y')
+    g_srare <- g_srare +
+        ggtitle(paste('Species Richness by ', group_var, ' for Rarefied data\nInverse Simpson Index',
+                      sep='', collapse='')) +
+        ylab('Unique Species\n') +
+        xlab(paste('\n', group_var, sep='', collapse='')) +
+        theme(strip.text.x=element_text(size=26),
+              axis.text.y=element_text(size=20),
+              axis.text.x=element_blank(),
+              axis.title.x=element_text(size=26),
+              axis.title.y=element_text(size=26, vjust=1),
+              #legend.position="right",
+              legend.title=element_text(size=24, vjust=1),
+              legend.text=element_text(size=20),
+              plot.title=element_text(size=30, hjust=0.5))
+    print(g_srare)
+    dev.off()
+}
 
 
 

@@ -357,7 +357,25 @@ for( l in 1:length(kraken_raw_analytic_data) ) {
 #############################################
 ## Exploratory Analyses: Alpha Rarefaction ##
 #############################################
-
+for( v in 1:length(exploratory_vars) ) {
+    # AMR
+    meg_alpha_rarefaction(data_list=AMR_raw_analytic_data,
+                          data_names=AMR_raw_analytic_names,
+                          metadata=metadata,
+                          sample_var='ID',
+                          group_var=exploratory_vars[v],
+                          outdir=graph_output_dir,
+                          data_type='AMR')
+    
+    # Microbiome
+    meg_alpha_rarefaction(data_list=kraken_raw_analytic_data,
+                          data_names=kraken_raw_analytic_names,
+                          metadata=metadata,
+                          sample_var='ID',
+                          group_var=exploratory_vars[v],
+                          outdir=graph_output_dir,
+                          data_type='Microbiome')
+}
 
 
 ######################################
