@@ -424,8 +424,9 @@ for( v in 1:length(exploratory_vars) ) {
     }
 }
 
-for( v in exploratory_vars ) {
-    for( l in AMR_analytic_names ) {
+# Microbiome
+for( v in 1:length(exploratory_vars) ) {
+    for( l in 1:length(kraken_analytic_names) ) {
         meg_heatmap(data_list=kraken_analytic_data,
                     data_names=kraken_analytic_names,
                     metadata=metadata,
