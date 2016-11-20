@@ -177,8 +177,62 @@ meg_heatmap <- function(data_list,
                         data_names,
                         metadata,
                         sample_var,
-                        hull_var,
+                        group_var,
+                        level_var,
                         outdir,
                         data_type) {
+    tile_subset <- melted_analytic[Level_ID == level_var, ]
+    tile_subset <- metadata[tile_subset]
+    sample_order <- unique(tile_subset[order(group_var), sample_var])
+    tile_subset <- within(tile_subset, sample_var
+                                <- factor(sample_var,
+                                          levels=sample_order,
+                                          ordered=T))
     
+    setkey(tile_subset, Normalized_Count)
+    tile_subset <- tile_subset[, sum(Normalized_Count),
+                                by=c(group_var, sample_var, 'Name')]
+    names(tile_subset)[length(names(tile_subset))] <- 'Normalized_Count'
+    tile_subset <- tile_subset[, tail(.SD, 7), by=c(group_var, sample_var)]
+    
+    sample_vec <- as.character(tile_subset[[sample_var]])
+    
+    tile <- ggplot(tile_subset, aes(x=sample_vec, y=Name)) +
+        geom_tile(aes(fill=log2(Normalized_Count+1))) +
+        facet_wrap(group_var, switch='x', scales = 'free_x', nrow = 1) +
+        theme(panel.background=element_rect(fill="black", colour="black"),
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank(),
+              strip.text.x=element_text(size=20),
+              axis.text.y=element_text(size=20),
+              axis.text.x=element_blank(),
+              axis.title.x=element_text(size=20),
+              axis.title.y=element_blank(),
+              legend.position="bottom",
+              legend.title=element_text(size=20),
+              panel.margin=unit(0.1, "lines"),
+              plot.title=element_text(size=24, hjust=0.5),
+              plot.margin=unit(c(0,0,0,0), "cm")) +
+        xlab(paste('Samples by ', group_var, sep='', collapse='')) +
+        scale_fill_gradient(low="black", high="cyan") +
+        labs(fill= 'Log2 Normalized Count') +
+        ggtitle(paste(data_type, ' ', level_var, ' Normalized Counts by ', group_var, '\n',
+                      sep='', collapse=''))
+    png(filename=paste(outdir, '/', level_var, '_', group_var, '_',
+                       'Heatmap.png', sep='', collapse=''), width=1400, height=700)
+    print(tile)
+    dev.off()
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

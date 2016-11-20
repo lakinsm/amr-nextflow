@@ -70,12 +70,6 @@ fixed_effects = c()
 
 
 
-
-
-
-
-
-
 ####################
 ## Automated Code ##
 ####################
@@ -369,7 +363,7 @@ for( l in 1:length(kraken_raw_analytic_data) ) {
 ######################################
 ## Exploratory Analyses: Ordination ##
 ######################################
-for( v in exploratory_vars ) {
+for( v in 1:length(exploratory_vars) ) {
     # AMR NMDS
     meg_ordination(data_list = amr_analytic_data,
                    data_names = amr_analytic_names,
@@ -416,6 +410,32 @@ for( v in exploratory_vars ) {
 ## Exploratory Analyses: Heatmaps ##
 ####################################
 
+# AMR Heatmaps for each level
+for( v in 1:length(exploratory_vars) ) {
+    for( l in 1:length(AMR_analytic_names) ) {
+        meg_heatmap(data_list=AMR_analytic_data,
+                    data_names=AMR_analytic_names,
+                    metadata=metadata,
+                    sample_var=sample_column_id,
+                    group_var=exploratory_vars[v],
+                    level_var=AMR_analytic_names[l],
+                    outdir=graph_output_dir,
+                    data_type='AMR')
+    }
+}
+
+for( v in exploratory_vars ) {
+    for( l in AMR_analytic_names ) {
+        meg_heatmap(data_list=kraken_analytic_data,
+                    data_names=kraken_analytic_names,
+                    metadata=metadata,
+                    sample_var=sample_column_id,
+                    group_var=exploratory_vars[v],
+                    level_var=kraken_analytic_names[l],
+                    outdir=graph_output_dir,
+                    data_type='Microbiome')
+    }
+}
 
 
 ####################################
