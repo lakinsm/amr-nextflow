@@ -34,11 +34,11 @@ setwd('.')
 
 
 # Set the output directory for graphs:
-graph_output_dir = ''
+graph_output_dir = 'graphs'
 
 
 # Set the output directory for statistics:
-stats_output_dir = ''
+stats_output_dir = 'stats'
 
 
 # Where is the metadata file stored on your machine?
@@ -49,36 +49,42 @@ metadata_filepath = 'metadata.csv'
 sample_column_id = 'ID'
 
 
-# The following is a list of variables in your metadata.csv file that you want
+# The following is a list of column names in your metadata.csv file that you want
 # to use for EXPLORATORY analysis (NMDS, PCA, alpha rarefaction, barplots)
-exploratory_vars = c()
+exploratory_vars = c('Location', 'Type')
 
 
-# The following is a list of model matrices (using model.matrix) that you want
-# to use for STATISTICAL analyses.  Pairwise contrasts will be generated
+# The following is a list of strings specifying the formula for your
+# model matrices (will be passed to model.matrix) that you want
+# to use for STATISTICAL analyses.  An example is given below.
 stats_model_matrices = list(
-    
+    '~ 0 + Type',
+    '~ 0 + Type'
 )
 
-# The following is a list of vectors, where each vector are the variables that
+# The following is a list of character lists, where each string includes the variables that
 # you desire contrasts for a given model matrix.  For instance, the second vector
 # in this list of vectors corresponds to the second model matrix in the previous
-# list of model matrices.
+# list of model matrices.  An example is given below.
 stats_contrast_vars = list(
+    list('TypeVar1 - TypeVar2',
+      'TypeVar1 - TypeVar3',
+      'TypeVar2 - TypeVar3'),
     
+    list('TypeVar1 - TypeVar2',
+         'TypeVar1 - TypeVar3',
+         'TypeVar2 - TypeVar3')
 )
 
 # If you wish to use RANDOM EFFECTS in the statistical analysis,
 # specify a single variable for each model matrix in the above model matrix
 # list.  If no random effect is desired, then 
-random_effect = c()
+stats_random_effect = c(NA, 'Location')
 
 
 # Optional vector of names for your statistical model matrices.  These will be
 # used to name the files for the statistical output.
-stats_names = c()
-
-
+stats_analysis_names = c('TypeNoRandom', 'TypeLocationRandom')
 
 
 
@@ -86,6 +92,16 @@ stats_names = c()
 ## Automated Code ##
 ####################
 ## Modify this as necessary, though you shouldn't need to for basic use.
+
+
+## Check to see that the user input the stats lists correctly
+if(length(unique(sapply(list(stats_model_matrices,
+                             stats_contrast_vars,
+                             stats_random_effect,
+                             stats_analysis_names), FUN=length))) != 1) {
+    stop('The length of all \"stats\" variables in the user input must be the same,
+         i.e. the length of each input should equal the number of analyses performed.')
+}
 
 # Source the utility functions file, which should be in the scripts folder with this file
 source('scripts/meg_utility_functions.R')
@@ -109,7 +125,7 @@ snp_regex = c('Aminocoumarin-resistant DNA topoisomerases','Aminoglycoside N-ace
 ## These files should be standard for all analyses, as they are
 ## the output matrices from AMR++ nextflow.  Additionally,
 ## you will need to obtain the most recent megares annotations file
-## from megares.meglab.org
+## from megares.meglab.org  
 
 # Load the data, MEGARes annotations, and metadata
 kraken <- newMRexperiment(read.table('kraken_analytic_matrix.csv', header=T, row.names=1, sep=','))
@@ -296,7 +312,7 @@ kraken_melted_raw_analytic <- rbind(melt_dt(MRcounts(kraken_domain_raw_analytic)
 
 # Ensure that the metadata entries match the factor order of the MRexperiments
 metadata <- data.table(metadata[match(colnames(MRcounts(amr_class_analytic)), metadata[, sample_column_id]), ])
-setkey(metadata, sample_column_id)
+setkeyv(metadata, sample_column_id)
 
 
 # Vector of objects for iteration and their names
@@ -329,38 +345,38 @@ kraken_raw_analytic_names <- c('Domain', 'Phylum', 'Class', 'Order', 'Family', '
 
 
 for( l in 1:length(AMR_analytic_data) ) {
-    sample_idx <- match(colnames(MRcounts(AMR_analytic_data[[l]])), metadata[, sample_column_id])
+    sample_idx <- match(colnames(MRcounts(AMR_analytic_data[[l]])), metadata[[sample_column_id]])
     pData(AMR_analytic_data[[l]]) <- data.frame(
         metadata[sample_idx, .SD, .SDcols=!sample_column_id])
-    rownames(pData(AMR_analytic_data[[l]])) <- metadata[sample_idx, sample_column_id]
+    rownames(pData(AMR_analytic_data[[l]])) <- metadata[sample_idx, .SD, .SDcols=sample_column_id][[sample_column_id]]
     fData(AMR_analytic_data[[l]]) <- data.frame(Feature=rownames(MRcounts(AMR_analytic_data[[l]])))
     rownames(fData(AMR_analytic_data[[l]])) <- rownames(MRcounts(AMR_analytic_data[[l]]))
 }
 
 for( l in 1:length(AMR_raw_analytic_data) ) {
-    sample_idx <- match(colnames(MRcounts(AMR_raw_analytic_data[[l]])), metadata[, sample_column_id])
+    sample_idx <- match(colnames(MRcounts(AMR_raw_analytic_data[[l]])), metadata[[sample_column_id]])
     pData(AMR_raw_analytic_data[[l]]) <- data.frame(
         metadata[sample_idx, .SD, .SDcols=!sample_column_id])
-    rownames(pData(AMR_raw_analytic_data[[l]])) <- metadata[sample_idx, sample_column_id]
+    rownames(pData(AMR_raw_analytic_data[[l]])) <- metadata[sample_idx, .SD, .SDcols=sample_column_id][[sample_column_id]]
     fData(AMR_raw_analytic_data[[l]]) <- data.frame(Feature=rownames(MRcounts(AMR_raw_analytic_data[[l]])))
     rownames(fData(AMR_raw_analytic_data[[l]])) <- rownames(MRcounts(AMR_raw_analytic_data[[l]]))
 }
 
 
 for( l in 1:length(kraken_analytic_data) ) {
-    sample_idx <- match(colnames(MRcounts(kraken_analytic_data[[l]])), metadata[, sample_column_id])
+    sample_idx <- match(colnames(MRcounts(kraken_analytic_data[[l]])), metadata[[sample_column_id]])
     pData(kraken_analytic_data[[l]]) <- data.frame(
         metadata[sample_idx, .SD, .SDcols=!sample_column_id])
-    rownames(pData(kraken_analytic_data[[l]])) <- metadata[sample_idx, sample_column_id]
+    rownames(pData(kraken_analytic_data[[l]])) <- metadata[sample_idx, .SD, .SDcols=sample_column_id][[sample_column_id]]
     fData(kraken_analytic_data[[l]]) <- data.frame(Feature=rownames(MRcounts(kraken_analytic_data[[l]])))
     rownames(fData(kraken_analytic_data[[l]])) <- rownames(MRcounts(kraken_analytic_data[[l]]))
 }
 
 for( l in 1:length(kraken_raw_analytic_data) ) {
-    sample_idx <- match(colnames(MRcounts(kraken_raw_analytic_data[[l]])), metadata[, sample_column_id])
+    sample_idx <- match(colnames(MRcounts(kraken_raw_analytic_data[[l]])), metadata[[sample_column_id]])
     pData(kraken_raw_analytic_data[[l]]) <- data.frame(
         metadata[sample_idx, .SD, .SDcols=!sample_column_id])
-    rownames(pData(kraken_raw_analytic_data[[l]])) <- metadata[sample_idx, sample_column_id]
+    rownames(pData(kraken_raw_analytic_data[[l]])) <- metadata[sample_idx, .SD, .SDcols=sample_column_id][[sample_column_id]]
     fData(kraken_raw_analytic_data[[l]]) <- data.frame(Feature=rownames(MRcounts(kraken_raw_analytic_data[[l]])))
     rownames(fData(kraken_raw_analytic_data[[l]])) <- rownames(MRcounts(kraken_raw_analytic_data[[l]]))
 }
@@ -395,8 +411,8 @@ for( v in 1:length(exploratory_vars) ) {
 ######################################
 for( v in 1:length(exploratory_vars) ) {
     # AMR NMDS
-    meg_ordination(data_list = amr_analytic_data,
-                   data_names = amr_analytic_names,
+    meg_ordination(data_list = AMR_analytic_data,
+                   data_names = AMR_analytic_names,
                    metadata = metadata,
                    sample_var = sample_column_id,
                    hull_var = exploratory_vars[v],
@@ -405,8 +421,8 @@ for( v in 1:length(exploratory_vars) ) {
                    method = 'NMDS')
     
     # AMR PCA
-    meg_ordination(data_list = amr_analytic_data,
-                   data_names = amr_analytic_names,
+    meg_ordination(data_list = AMR_analytic_data,
+                   data_names = AMR_analytic_names,
                    metadata = metadata,
                    sample_var = sample_column_id,
                    hull_var = exploratory_vars[v],
@@ -443,8 +459,7 @@ for( v in 1:length(exploratory_vars) ) {
 # AMR Heatmaps for each level
 for( v in 1:length(exploratory_vars) ) {
     for( l in 1:length(AMR_analytic_names) ) {
-        meg_heatmap(data_list=AMR_analytic_data,
-                    data_names=AMR_analytic_names,
+        meg_heatmap(melted_data=amr_melted_analytic,
                     metadata=metadata,
                     sample_var=sample_column_id,
                     group_var=exploratory_vars[v],
@@ -457,8 +472,7 @@ for( v in 1:length(exploratory_vars) ) {
 # Microbiome
 for( v in 1:length(exploratory_vars) ) {
     for( l in 1:length(kraken_analytic_names) ) {
-        meg_heatmap(data_list=kraken_analytic_data,
-                    data_names=kraken_analytic_names,
+        meg_heatmap(melted_data=kraken_melted_analytic,
                     metadata=metadata,
                     sample_var=sample_column_id,
                     group_var=exploratory_vars[v],
@@ -507,6 +521,35 @@ for( v in 1:length(exploratory_vars) ) {
 ##########################
 ## Statistical Analyses ##
 ##########################
+for( a in 1:length(stats_model_matrices) ) {
+    meg_fitZig(data_list=AMR_analytic_data,
+               data_names=AMR_analytic_names,
+               zero_mod=model.matrix(~1 + log(libSize(amr))),
+               data_mod=stats_model_matrices[a],
+               filter_min_threshold=0.15,
+               analytic_sample_names=metadata[[sample_column_id]],  # TODO: add sample subsetting here as an option
+               contrast_list=stats_contrast_vars[[a]],
+               random_effect_var=stats_random_effect[a],
+               outdir=stats_output_dir,
+               analysis_name=stats_analysis_names[a],
+               data_type='AMR',
+               pval=0.05,
+               top_hits=100)
+    
+    meg_fitZig(data_list=kraken_analytic_data,
+               data_names=kraken_analytic_names,
+               zero_mod=model.matrix(~1 + log(libSize(kraken))),
+               data_mod=stats_model_matrices[a],
+               filter_min_threshold=0.15,
+               analytic_sample_names=metadata[[sample_column_id]],  # TODO: add sample subsetting here as an option
+               contrast_list=stats_contrast_vars[[a]],
+               random_effect_var=stats_random_effect[a],
+               outdir=stats_output_dir,
+               analysis_name=stats_analysis_names[a],
+               data_type='Microbiome',
+               pval=0.05,
+               top_hits=100)
+}
 
 
 

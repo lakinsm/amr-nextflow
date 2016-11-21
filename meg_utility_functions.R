@@ -12,7 +12,7 @@
 # Misc reshape function for data table
 melt_dt <- function(D, level_id) {
     temp <- melt(D, variable.name='Sample', value.name='Normalized_Count')
-    names(temp) <- c('Name', 'Sample', 'Normalized_Count')
+    names(temp) <- c('Name', 'ID', 'Normalized_Count')
     temp <- data.table(cbind(rep(level_id, nrow(temp)), temp))
     names(temp)[1] <- 'Level_ID'
     return(temp)
@@ -89,9 +89,9 @@ meg_ordination <- function(data_list,
             ord.res <- prcomp(t_data, center=T, scale=T)
             
             # Format to include metadata for ggplot2
-            ord_points <- data.table(pca.res$x[, 1:2])
+            ord_points <- data.table(ord.res$x[, 1:2])
             names(ord_points) <- c('Ord1', 'Ord2')
-            ord_points[, ID :=( rownames(pca.res$x) )]
+            ord_points[, ID :=( rownames(ord.res$x) )]
         }
         else {
             stop('method must be either NMDS or PCA')
@@ -173,15 +173,17 @@ meg_ordination <- function(data_list,
 }
 
 
-meg_heatmap <- function(data_list,
-                        data_names,
+meg_heatmap <- function(melted_data,
                         metadata,
                         sample_var,
                         group_var,
                         level_var,
                         outdir,
                         data_type) {
-    tile_subset <- melted_analytic[Level_ID == level_var, ]
+    tile_subset <- melted_data[Level_ID == level_var, ]
+    colnames(tile_subset)[colnames(tile_subset) == 'ID'] <- sample_var
+    setkeyv(tile_subset, sample_var)
+    
     tile_subset <- metadata[tile_subset]
     tile_subset <- tile_subset[!is.na(tile_subset[[group_var]]), ]
     
@@ -197,11 +199,11 @@ meg_heatmap <- function(data_list,
     names(tile_subset)[length(names(tile_subset))] <- 'Normalized_Count'
     tile_subset <- tile_subset[, tail(.SD, 7), by=c(group_var, sample_var)]
     
-    sample_vec <- as.character(tile_subset[[sample_var]])
+    #sample_vec <- as.character(tile_subset[[sample_var]])
     
-    tile <- ggplot(tile_subset, aes(x=sample_vec, y=Name)) +
+    tile <- ggplot(tile_subset, aes_string(x=sample_var, y='Name')) +
         geom_tile(aes(fill=log2(Normalized_Count+1))) +
-        facet_wrap(group_var, switch='x', scales = 'free_x', nrow = 1) +
+        facet_wrap(as.formula(paste('~', group_var)), switch='x', scales = 'free_x', nrow = 1) +
         theme(panel.background=element_rect(fill="black", colour="black"),
               panel.grid.major = element_blank(),
               panel.grid.minor = element_blank(),
@@ -395,8 +397,11 @@ meg_barplot <- function(melted_data,
                         level_var,
                         outdir,
                         data_type) {
-    bar_subset <- data.table(melted_analytic[Level_ID == level_var &
-                                                 !is.na(melted_analytic[[group_var]]),
+    setkeyv(melted_data, sample_var)
+    melted_data <- metadata[melted_data]
+    
+    bar_subset <- data.table(melted_data[Level_ID == level_var &
+                                                 !is.na(melted_data[[group_var]]),
                                                     .SD,
                                                     .SDcols=c(sample_var,
                                                               group_var,
@@ -442,6 +447,80 @@ meg_barplot <- function(melted_data,
     dev.off()
 }
 
+
+meg_fitZig <- function(data_list,
+                       data_names,
+                       zero_mod,
+                       data_mod,
+                       filter_min_threshold,
+                       analytic_sample_names,
+                       contrast_list,
+                       random_effect_var,
+                       outdir,
+                       analysis_name,
+                       data_type,
+                       pval=0.05,
+                       top_hits=100) {
+    settings <- zigControl(maxit=50, verbose=T)
+    
+    local_obj <- data_list
+    res <- list()
+    for( l in 1:length(local_obj) ) {
+        
+        filter_threshold <- quantile(rowSums(MRcounts(local_obj[[l]])), 0.15)
+        if( filter_threshold > filter_min_threshold ) filter_threshold <- filter_min_threshold
+        local_obj[[l]] <- local_obj[[l]][which(rowSums(MRcounts(local_obj[[l]])) >= filter_threshold ), ]
+        
+        col_selection <- as.integer(which(colSums(MRcounts(local_obj[[l]]) > 0) > 1))
+        local_obj[[l]] <- local_obj[[l]][, col_selection]
+        
+        print(l)
+        print(length(col_selection))
+
+        mod_select <- model.matrix(eval(parse(text=data_mod)), data=pData(local_obj[[l]]))
+        zero_mod_select <- zero_mod[col_selection, ]
+        
+        cumNorm(local_obj[[l]])  # This is a placeholder for metagenomeSeq; we don't actually use these values
+        
+        if( is.na(random_effect_var) ) {
+            res[[l]] <- fitZig(obj=local_obj[[l]],
+                                   mod=mod_select,
+                                   zeroMod=zero_mod_select,
+                                   control=settings,
+                                   useCSSoffset=F)
+        }
+        else {
+            res[[l]] <- fitZig(obj=local_obj[[l]],
+                                   mod=mod_select,
+                                   zeroMod=zero_mod_select,
+                                   control=settings,
+                                   useCSSoffset=F,
+                                   useMixedModel=T,
+                                   block=pData(local_obj[[l]])[, random_effect_var])
+        }
+        
+        local_contrasts <- contrast_list
+        local_contrasts[[length(local_contrasts)+1]] <- res[[l]]$fit$design
+        names(local_contrasts)[length(local_contrasts)] <- 'levels'
+        
+        contrast_matrix <- do.call(makeContrasts, local_contrasts)
+        colnames(contrast_matrix) <- make.names(contrast_list)
+        
+        contrast_fit <- contrasts.fit(res[[l]]$fit, contrast_matrix)
+        contrast_fit <- topTable(eBayes(contrast_fit), p.value=pval, confint=T, number=top_hits)
+        if( length(contrast_list) == 1 ) {
+            write.csv(contrast_fit, file=paste(outdir, '/', analysis_name, '_', data_type, '_',
+                                               data_names[l], '_',
+                                               contrast_list[1], '_Model_Contrasts.csv',
+                                               sep='', collapse=''), quote=F)
+        }
+        else {
+            write.csv(contrast_fit, file=paste(outdir, '/', analysis_name, '_', data_type, '_',
+                                               data_names[l], '_Model_Contrasts.csv',
+                                               sep='', collapse=''), quote=F)
+        }
+    }
+}
 
 
 
