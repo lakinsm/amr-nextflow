@@ -54,19 +54,31 @@ sample_column_id = 'ID'
 exploratory_vars = c()
 
 
-# The following is a list of variables in your metadata.csv file that you want
+# The following is a list of model matrices (using model.matrix) that you want
 # to use for STATISTICAL analyses.  Pairwise contrasts will be generated
-stats_vars = c()
+stats_model_matrices = list(
+    
+)
 
+# The following is a list of vectors, where each vector are the variables that
+# you desire contrasts for a given model matrix.  For instance, the second vector
+# in this list of vectors corresponds to the second model matrix in the previous
+# list of model matrices.
+stats_contrast_vars = list(
+    
+)
 
 # If you wish to use RANDOM EFFECTS in the statistical analysis,
-# specify a single variable for that here.
-random_effect = NA
+# specify a single variable for each model matrix in the above model matrix
+# list.  If no random effect is desired, then 
+random_effect = c()
 
 
-# If you wish to use other FIXED EFFECTS in the statistical analysis,
-# specify a character vector of those variables here.
-fixed_effects = c()
+# Optional vector of names for your statistical model matrices.  These will be
+# used to name the files for the statistical output.
+stats_names = c()
+
+
 
 
 
@@ -461,6 +473,35 @@ for( v in 1:length(exploratory_vars) ) {
 ## Exploratory Analyses: Barplots ##
 ####################################
 
+# AMR
+for( v in 1:length(exploratory_vars) ) {
+    for( l in 1:length(AMR_analytic_names) ) {
+        suppressWarnings(
+            meg_barplot(melted_data=amr_melted_analytic,
+                    metadata=metadata,
+                    sample_var=sample_column_id,
+                    group_var=exploratory_vars[v],
+                    level_var=AMR_analytic_names[l],
+                    outdir=graph_output_dir,
+                    data_type='AMR')
+        )
+    }
+}
+
+# Microbiome
+for( v in 1:length(exploratory_vars) ) {
+    for( l in 1:length(kraken_analytic_names) ) {
+        suppressWarnings(
+            meg_barplot(melted_data=kraken_melted_analytic,
+                    metadata=metadata,
+                    sample_var=sample_column_id,
+                    group_var=exploratory_vars[v],
+                    level_var=kraken_analytic_names[l],
+                    outdir=graph_output_dir,
+                    data_type='Microbiome')
+        )
+    }
+}
 
 
 ##########################

@@ -183,6 +183,8 @@ meg_heatmap <- function(data_list,
                         data_type) {
     tile_subset <- melted_analytic[Level_ID == level_var, ]
     tile_subset <- metadata[tile_subset]
+    tile_subset <- tile_subset[!is.na(tile_subset[[group_var]]), ]
+    
     sample_order <- unique(tile_subset[order(group_var), sample_var])
     tile_subset <- within(tile_subset, sample_var
                                 <- factor(sample_var,
@@ -235,27 +237,40 @@ meg_alpha_rarefaction <- function(data_list,
     all_alphadiv <- data.table(ID=character(),
                                Level=character(),
                                Value=numeric())
+    names(all_alphadiv)[1] <- sample_var
+    
     all_species_raw <- data.table(ID=character(),
                                   Level=character(),
                                   Value=numeric())
+    names(all_species_raw)[1] <- sample_var
+    
     all_species_rare <- data.table(ID=character(),
                                    Level=character(),
                                    Value=numeric())
+    names(all_species_rare)[1] <- sample_var
+    
     for( l in 1:length(data_list) ) {
         local_obj <- alpha_rarefaction(MRcounts(data_list[[l]]))
-        if(l == 1) test <<- local_obj
-        all_alphadiv <- rbind(all_alphadiv, data.table(ID=names(local_obj$alphadiv),
-                                                       Level=rep(data_names[l],
-                                                                 length(local_obj$alphadiv)),
-                                                       Value=as.numeric(local_obj$alphadiv)))
-        all_species_raw <- rbind(all_species_raw, data.table(ID=names(local_obj$raw_species_abundance),
-                                                             Level=rep(data_names[l],
-                                                                       length(local_obj$raw_species_abundance)),
-                                                             Value=as.numeric(local_obj$raw_species_abundance)))
-        all_species_rare <- rbind(all_species_rare, data.table(ID=names(local_obj$rarefied_species_abundance),
-                                                               Level=rep(data_names[l],
-                                                                         length(local_obj$rarefied_species_abundance)),
-                                                               Value=as.numeric(local_obj$rarefied_species_abundance)))
+        temp <- data.table(ID=names(local_obj$alphadiv),
+                           Level=rep(data_names[l],
+                                     length(local_obj$alphadiv)),
+                           Value=as.numeric(local_obj$alphadiv))
+        names(temp)[1] <- sample_var
+        all_alphadiv <- rbind(all_alphadiv, temp)
+        
+        temp <- data.table(ID=names(local_obj$raw_species_abundance),
+                   Level=rep(data_names[l],
+                             length(local_obj$raw_species_abundance)),
+                   Value=as.numeric(local_obj$raw_species_abundance))
+        names(temp)[1] <- sample_var
+        all_species_raw <- rbind(all_species_raw, temp)
+        
+        temp <- data.table(ID=names(local_obj$rarefied_species_abundance),
+                   Level=rep(data_names[l],
+                             length(local_obj$rarefied_species_abundance)),
+                   Value=as.numeric(local_obj$rarefied_species_abundance))
+        names(temp)[1] <- sample_var
+        all_species_rare <- rbind(all_species_rare, temp)
     }
     
     all_alphadiv <- within(all_alphadiv, Level
@@ -267,13 +282,19 @@ meg_alpha_rarefaction <- function(data_list,
     all_species_rare <- within(all_species_rare, Level
                                <- factor(Level, levels=data_names,
                                          ordered=T))
-    setkey(all_alphadiv, ID)
-    setkey(all_species_raw, ID)
-    setkey(all_species_rare, ID)
+    setkeyv(all_alphadiv, sample_var)
+    setkeyv(all_species_raw, sample_var)
+    setkeyv(all_species_rare, sample_var)
     
     all_alphadiv <- metadata[all_alphadiv]
     all_species_raw <- metadata[all_species_raw]
     all_species_rare <- metadata[all_species_rare]
+    
+    all_alphadiv <- all_alphadiv[!is.na(all_alphadiv[[group_var]]), ]
+    all_species_raw <- all_species_raw[!is.na(all_species_raw[[group_var]]), ]
+    all_species_rare <- all_species_rare[!is.na(all_species_rare[[group_var]]), ]
+    
+    test <<- all_alphadiv
     
     alphadiv_type_sums <- all_alphadiv[Level==data_names[2], median(Value), by=group_var]
     alphadiv_value_labels <- as.character(alphadiv_type_sums[[group_var]][order(alphadiv_type_sums$V1, decreasing=T)])
@@ -367,7 +388,59 @@ meg_alpha_rarefaction <- function(data_list,
 }
 
 
-
+meg_barplot <- function(melted_data,
+                        metadata,
+                        sample_var,
+                        group_var,
+                        level_var,
+                        outdir,
+                        data_type) {
+    bar_subset <- data.table(melted_analytic[Level_ID == level_var &
+                                                 !is.na(melted_analytic[[group_var]]),
+                                                    .SD,
+                                                    .SDcols=c(sample_var,
+                                                              group_var,
+                                                              'Name',
+                                                              'Normalized_Count')])
+    setkeyv(bar_subset, sample_var)
+    bar_subset <- metadata[bar_subset]
+    bar_subset[[sample_var]] <- factor(bar_subset[[sample_var]],
+                                          levels=unique(bar_subset[[sample_var]][order(bar_subset[[group_var]])]),
+                                          ordered=T)
+    
+    setkey(bar_subset, Normalized_Count)
+    bar_subset[, sample_number:=(length(unique(bar_subset[[sample_var]]))), by=c(group_var, 'Name')]
+    bar_subset <- unique(bar_subset[, sum(Normalized_Count) / sample_number,
+                                                  by=c(group_var, 'Name')])
+    bar_subset <- bar_subset[, tail(.SD, 6), by=group_var]
+    names(bar_subset)[length(names(bar_subset))] <- 'Normalized_Count'
+    source_sums <- tapply(bar_subset[['Normalized_Count']],
+                          bar_subset[[group_var]], sum)
+    source_labels <- names(source_sums)[order(source_sums, decreasing=T)]
+    bar_subset[[group_var]] <- factor(bar_subset[[group_var]],
+                                          levels=source_labels, ordered=T)
+    
+    
+    meg_bar <- ggplot(bar_subset, aes_string(x=group_var, y='Normalized_Count', fill='Name')) +
+        geom_bar(stat='identity') + 
+        scale_fill_brewer(palette="Spectral") +
+        theme(strip.text.x=element_text(size=18),
+              axis.text.y=element_text(size=20),
+              axis.text.x=element_text(size=22, vjust=1, hjust=1, angle=33),
+              axis.title.x=element_text(size=24),
+              axis.title.y=element_text(size=24),
+              legend.title=element_text(size=20),
+              legend.text=element_text(size=18),
+              plot.title=element_text(size=26, hjust=0.25)) +
+        xlab(group_var) +
+        ylab('Mean of Normalized Count\n') +
+        ggtitle(paste('Mean ', data_type, ' ', level_var, ' Normalized Count by ', group_var, '\n',
+                      sep='', collapse=''))
+    png(filename=paste(outdir, '/', data_type, '_', level_var, '_BarPlot_by_', group_var, '.png',
+                       sep='', collapse=''), width=1024, height=768)
+    print(meg_bar)
+    dev.off()
+}
 
 
 
