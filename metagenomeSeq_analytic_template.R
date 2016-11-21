@@ -78,7 +78,7 @@ stats_contrast_vars = list(
 
 # If you wish to use RANDOM EFFECTS in the statistical analysis,
 # specify a single variable for each model matrix in the above model matrix
-# list.  If no random effect is desired, then 
+# list.  If no random effect is desired, then put NA.
 stats_random_effect = c(NA, 'Location')
 
 
