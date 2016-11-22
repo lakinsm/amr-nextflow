@@ -36,6 +36,16 @@ alpha_rarefaction <- function(X, minlevel = 0, method='invsimpson') {
                 alphadiv=alphadiv))
 }
 
+
+heatmap_select_top_counts <- function(X, group_var, sample_var, n) {
+    return(X[, tail(.SD, n), by=c(group_var, sample_var)])
+}
+
+bar_select_top_counts <- function(X, group_var, n) {
+    return(X[, tail(.SD, n), by=group_var])
+}
+
+
 # Function for computing ordination plots with convex hulls
 # using ggplot2.  You will have to specify the facet variable,
 # i.e. which experimental design variable determines the grouping of points.
@@ -197,9 +207,19 @@ meg_heatmap <- function(melted_data,
     tile_subset <- tile_subset[, sum(Normalized_Count),
                                 by=c(group_var, sample_var, 'Name')]
     names(tile_subset)[length(names(tile_subset))] <- 'Normalized_Count'
-    tile_subset <- tile_subset[, tail(.SD, 7), by=c(group_var, sample_var)]
     
-    #sample_vec <- as.character(tile_subset[[sample_var]])
+    numselect <- 20
+    tile_names <- heatmap_select_top_counts(tile_subset, group_var,
+                                     sample_var, numselect)
+    name_count <- length(unique(tile_names$Name))
+    while(name_count > 20) {
+        numselect <- numselect - 1
+        tile_names <- heatmap_select_top_counts(tile_subset, group_var,
+                                         sample_var, numselect)
+        name_count <- length(unique(tile_names$Name))
+    }
+    
+    tile_subset <- tile_subset[Name %in% tile_names$Name, ]
     
     tile <- ggplot(tile_subset, aes_string(x=sample_var, y='Name')) +
         geom_tile(aes(fill=log2(Normalized_Count+1))) +
@@ -417,7 +437,19 @@ meg_barplot <- function(melted_data,
     bar_subset[, sample_number:=(length(unique(bar_subset[[sample_var]]))), by=c(group_var, 'Name')]
     bar_subset <- unique(bar_subset[, sum(Normalized_Count) / sample_number,
                                                   by=c(group_var, 'Name')])
-    bar_subset <- bar_subset[, tail(.SD, 6), by=group_var]
+    
+    numselect <- 11
+    bar_names <- bar_select_top_counts(bar_subset, group_var, numselect)
+    name_count <- length(unique(bar_names$Name))
+    while(name_count > 11) {
+        numselect <- numselect - 1
+        bar_names <- bar_select_top_counts(bar_subset, group_var, numselect)
+        name_count <- length(unique(bar_names$Name))
+    }
+    
+    bar_subset <- bar_subset[Name %in% bar_names$Name, ]
+    
+    
     names(bar_subset)[length(names(bar_subset))] <- 'Normalized_Count'
     source_sums <- tapply(bar_subset[['Normalized_Count']],
                           bar_subset[[group_var]], sum)

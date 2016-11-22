@@ -30,8 +30,7 @@
 ## statistical functions.
 
 # Set your working directory to the main folder for analysis:
-setwd('.')
-
+setwd('..')
 
 # Set the output directory for graphs:
 graph_output_dir = 'graphs'
@@ -70,11 +69,12 @@ stats_contrast_vars = list(
     list('TypeVar1 - TypeVar2',
       'TypeVar1 - TypeVar3',
       'TypeVar2 - TypeVar3'),
-    
+
     list('TypeVar1 - TypeVar2',
          'TypeVar1 - TypeVar3',
          'TypeVar2 - TypeVar3')
 )
+
 
 # If you wish to use RANDOM EFFECTS in the statistical analysis,
 # specify a single variable for each model matrix in the above model matrix
@@ -125,7 +125,29 @@ snp_regex = c('Aminocoumarin-resistant DNA topoisomerases','Aminoglycoside N-ace
 ## These files should be standard for all analyses, as they are
 ## the output matrices from AMR++ nextflow.  Additionally,
 ## you will need to obtain the most recent megares annotations file
-## from megares.meglab.org  
+## from megares.meglab.org
+
+
+# If subdirs for stats and exploratory variables don't exist, create them
+for( dtype in c('AMR', 'Microbiome') ) {
+    ifelse(!dir.exists(file.path(graph_output_dir, dtype)),
+           dir.create(file.path(graph_output_dir, dtype), mode='777'), FALSE)
+    
+    for( v in 1:length(exploratory_vars) ) {
+        ifelse(!dir.exists(file.path(graph_output_dir, dtype, exploratory_vars[v])),
+               dir.create(file.path(graph_output_dir, dtype, exploratory_vars[v]), mode='777'), FALSE)
+    }
+    
+    ifelse(!dir.exists(file.path(stats_output_dir, dtype)),
+           dir.create(file.path(stats_output_dir, dtype), mode='777'), FALSE)
+    
+    for( a in 1:length(stats_analysis_names) ) {
+        ifelse(!dir.exists(file.path(stats_output_dir, dtype, stats_analysis_names[a])),
+               dir.create(file.path(stats_output_dir, dtype, stats_analysis_names[a]), mode='777'), FALSE)
+    }
+}
+
+
 
 # Load the data, MEGARes annotations, and metadata
 kraken <- newMRexperiment(read.table('kraken_analytic_matrix.csv', header=T, row.names=1, sep=','))
@@ -392,7 +414,8 @@ for( v in 1:length(exploratory_vars) ) {
                           metadata=metadata,
                           sample_var='ID',
                           group_var=exploratory_vars[v],
-                          outdir=graph_output_dir,
+                          outdir=paste(graph_output_dir, 'AMR', exploratory_vars[v],
+                                       sep='/', collapse=''),
                           data_type='AMR')
     
     # Microbiome
@@ -401,7 +424,8 @@ for( v in 1:length(exploratory_vars) ) {
                           metadata=metadata,
                           sample_var='ID',
                           group_var=exploratory_vars[v],
-                          outdir=graph_output_dir,
+                          outdir=paste(graph_output_dir, 'Microbiome', exploratory_vars[v],
+                                       sep='/', collapse=''),
                           data_type='Microbiome')
 }
 
@@ -416,7 +440,8 @@ for( v in 1:length(exploratory_vars) ) {
                    metadata = metadata,
                    sample_var = sample_column_id,
                    hull_var = exploratory_vars[v],
-                   outdir = graph_output_dir,
+                   outdir = paste(graph_output_dir, 'AMR', exploratory_vars[v],
+                                  sep='/', collapse=''),
                    data_type = 'AMR',
                    method = 'NMDS')
     
@@ -426,7 +451,8 @@ for( v in 1:length(exploratory_vars) ) {
                    metadata = metadata,
                    sample_var = sample_column_id,
                    hull_var = exploratory_vars[v],
-                   outdir = graph_output_dir,
+                   outdir = paste(graph_output_dir, 'AMR', exploratory_vars[v],
+                                  sep='/', collapse=''),
                    data_type = 'AMR',
                    method = 'PCA')
     
@@ -436,7 +462,8 @@ for( v in 1:length(exploratory_vars) ) {
                    metadata = metadata,
                    sample_var = sample_column_id,
                    hull_var = exploratory_vars[v],
-                   outdir = graph_output_dir,
+                   outdir = paste(graph_output_dir, 'Microbiome', exploratory_vars[v],
+                                  sep='/', collapse=''),
                    data_type = 'Microbiome',
                    method = 'NMDS')
     
@@ -446,7 +473,8 @@ for( v in 1:length(exploratory_vars) ) {
                    metadata = metadata,
                    sample_var = sample_column_id,
                    hull_var = exploratory_vars[v],
-                   outdir = graph_output_dir,
+                   outdir = paste(graph_output_dir, 'Microbiome', exploratory_vars[v],
+                                  sep='/', collapse=''),
                    data_type = 'Microbiome',
                    method = 'PCA')
 }
@@ -464,7 +492,8 @@ for( v in 1:length(exploratory_vars) ) {
                     sample_var=sample_column_id,
                     group_var=exploratory_vars[v],
                     level_var=AMR_analytic_names[l],
-                    outdir=graph_output_dir,
+                    outdir=paste(graph_output_dir, 'AMR', exploratory_vars[v],
+                                 sep='/', collapse=''),
                     data_type='AMR')
     }
 }
@@ -477,7 +506,8 @@ for( v in 1:length(exploratory_vars) ) {
                     sample_var=sample_column_id,
                     group_var=exploratory_vars[v],
                     level_var=kraken_analytic_names[l],
-                    outdir=graph_output_dir,
+                    outdir=paste(graph_output_dir, 'Microbiome', exploratory_vars[v],
+                                 sep='/', collapse=''),
                     data_type='Microbiome')
     }
 }
@@ -496,7 +526,8 @@ for( v in 1:length(exploratory_vars) ) {
                     sample_var=sample_column_id,
                     group_var=exploratory_vars[v],
                     level_var=AMR_analytic_names[l],
-                    outdir=graph_output_dir,
+                    outdir=paste(graph_output_dir, 'AMR', exploratory_vars[v],
+                                 sep='/', collapse=''),
                     data_type='AMR')
         )
     }
@@ -511,7 +542,8 @@ for( v in 1:length(exploratory_vars) ) {
                     sample_var=sample_column_id,
                     group_var=exploratory_vars[v],
                     level_var=kraken_analytic_names[l],
-                    outdir=graph_output_dir,
+                    outdir=paste(graph_output_dir, 'Microbiome', exploratory_vars[v],
+                                 sep='/', collapse=''),
                     data_type='Microbiome')
         )
     }
@@ -530,7 +562,8 @@ for( a in 1:length(stats_model_matrices) ) {
                analytic_sample_names=metadata[[sample_column_id]],  # TODO: add sample subsetting here as an option
                contrast_list=stats_contrast_vars[[a]],
                random_effect_var=stats_random_effect[a],
-               outdir=stats_output_dir,
+               outdir=paste(stats_output_dir, 'AMR', stats_analysis_names[a],
+                            sep='/', collapse=''),
                analysis_name=stats_analysis_names[a],
                data_type='AMR',
                pval=0.05,
@@ -544,7 +577,8 @@ for( a in 1:length(stats_model_matrices) ) {
                analytic_sample_names=metadata[[sample_column_id]],  # TODO: add sample subsetting here as an option
                contrast_list=stats_contrast_vars[[a]],
                random_effect_var=stats_random_effect[a],
-               outdir=stats_output_dir,
+               outdir=paste(stats_output_dir, 'Microbiome', stats_analysis_names[a],
+                            sep='/', collapse=''),
                analysis_name=stats_analysis_names[a],
                data_type='Microbiome',
                pval=0.05,
