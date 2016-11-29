@@ -61,6 +61,7 @@ stats_model_matrices = list(
     '~ 0 + Type'
 )
 
+
 # The following is a list of character lists, where each string includes the variables that
 # you desire contrasts for a given model matrix.  For instance, the second vector
 # in this list of vectors corresponds to the second model matrix in the previous
@@ -87,6 +88,16 @@ stats_random_effect = c(NA, 'Location')
 stats_analysis_names = c('TypeNoRandom', 'TypeLocationRandom')
 
 
+# The following are a list of column subsets to be evaluated for
+# each statistical analysis.  If you desire a subset of the data
+# to be analyzed, then put the sample metadata type and its
+# value here for each analysis, else NA.  For example:
+stats_analysis_subsets = list(
+    list(NA, NA),
+    list('Type', 'Var1')
+)
+
+
 
 ####################
 ## Automated Code ##
@@ -95,7 +106,8 @@ stats_analysis_names = c('TypeNoRandom', 'TypeLocationRandom')
 
 
 ## Check to see that the user input the stats lists correctly
-if(length(unique(sapply(list(stats_model_matrices,
+if(length(unique(sapply(list(stats_analysis_subsets,
+                             stats_model_matrices,
                              stats_contrast_vars,
                              stats_random_effect,
                              stats_analysis_names), FUN=length))) != 1) {
@@ -115,8 +127,60 @@ set.seed(154)  # Seed the RNG, necessary for reproducibility
 
 
 # We usually filter out genes with wild-type potential.  If you want to include these
-# in your analysis, comment this line out
-snp_regex = c('Aminocoumarin-resistant DNA topoisomerases','Aminoglycoside N-acetyltransferases','Aminoglycoside-resistance regulator mutation','Aminoglycoside-resistant 16S-23S rRNA O-methyltransferases','Aminoglycoside-resistant 30S ribosomal subunit protein S12','Aminoglycoside-resistant gidB','Chloramphenicol acetyltransferases','Daptomycin-resistant beta-subunit of RNA polymerase RpoB','Daptomycin-resistant beta-subunit of RNA polymerase RpoC','Daptomycin-resistant cls','Daptomycin-resistant liaFSR','Daptomycin-resistant mprF','Daptomycin-resistant pgsA','Dihydrofolate reductase','EF-Tu inhibition','Ethambutol resistant arabinosyltransferase','Ethambutol-resistant iniA','Ethambutol-resistant iniC','Ethionamide-resistant monooxygenase EthA','Fluoroquinolone-resistant DNA topoisomerases','Isoniazid-resistant inhA','Isoniazid-resistant kasA','Isoniazid-resistant ndh','Lincomycin-resistant lmrA','MDR regulator','Mutant porin proteins','Polymyxin-resistant phoP','Pyrazinamide-resistant pncA','Rifampin-resistant beta-subunit of RNA polymerase RpoB','Rifampin-resistant embB','Sulfonamide-resistant dihydropteroate synthases','Tetracycline transcriptional repressor')
+# in your analysis, comment this vector out
+snp_regex = c('ACRR',
+              'CATB',
+              'CLS',
+              'DFRC',
+              'DHFR',
+              'DHFRIII',
+              'DHFRIX',
+              'EMBA',
+              'embB',
+              'EMBB',
+              'EMBC',
+              'EMBR',
+              'ETHA',
+              'FOLP',
+              'GIDB',
+              'GYRA',
+              'gyrB',
+              'GYRB',
+              'INHA',
+              'INIA',
+              'INIC',
+              'KASA',
+              'LIAFSR',
+              'LMRA',
+              'MARR',
+              'MEXR',
+              'MEXZ',
+              'mprF',
+              'MPRF',
+              'NDH',
+              'omp36',
+              'OMP36',
+              'OMPF',
+              'OPRD',
+              'PARC',
+              'parE',
+              'PARE',
+              'PGSA',
+              'phoP',
+              'PHOP',
+              'PNCA',
+              'POR',
+              'PORB',
+              'RAMR',
+              'rpoB',
+              'RPOB',
+              'RPOC',
+              'RPSL',
+              'SOXS',
+              'tetR',
+              'TETR',
+              'TLYA',
+              'TUFAB')
 
 
 ##########################
@@ -129,6 +193,9 @@ snp_regex = c('Aminocoumarin-resistant DNA topoisomerases','Aminoglycoside N-ace
 
 
 # If subdirs for stats and exploratory variables don't exist, create them
+ifelse(!dir.exists(file.path(graph_output_dir)), dir.create(file.path(graph_output_dir), mode='777'), FALSE)
+ifelse(!dir.exists(file.path(stats_output_dir)), dir.create(file.path(stats_output_dir), mode='777'), FALSE)
+
 for( dtype in c('AMR', 'Microbiome') ) {
     ifelse(!dir.exists(file.path(graph_output_dir, dtype)),
            dir.create(file.path(graph_output_dir, dtype), mode='777'), FALSE)
@@ -184,8 +251,8 @@ setkey(amr_raw, header)
 amr_raw <- annotations[amr_raw]  # left outer join
 
 # Remove groups that correspond to potentially wild-type genes
-amr_raw <- amr_raw[!(mechanism %in% snp_regex), ]
-amr_norm<- amr_norm[!(mechanism %in% snp_regex), ]
+amr_raw <- amr_raw[!(group %in% snp_regex), ]
+amr_norm<- amr_norm[!(group %in% snp_regex), ]
 
 
 # Group the AMR data by level for analysis
@@ -214,10 +281,10 @@ amr_group_raw_analytic <- newMRexperiment(counts=amr_group_raw[, .SD, .SDcols=!'
 rownames(amr_group_raw_analytic) <- amr_group_raw$group
 
 amr_gene_analytic <- newMRexperiment(
-    counts=amr_norm[!(mechanism %in% snp_regex),
+    counts=amr_norm[!(group %in% snp_regex),
                     .SD, .SDcols=!c('header', 'class', 'mechanism', 'group')])
 amr_gene_raw_analytic <- newMRexperiment(
-    counts=amr_raw[!(mechanism %in% snp_regex),
+    counts=amr_raw[!(group %in% snp_regex),
                    .SD, .SDcols=!c('header', 'class', 'mechanism', 'group')])
 
 rownames(amr_gene_analytic) <- amr_norm$header
@@ -556,30 +623,32 @@ for( v in 1:length(exploratory_vars) ) {
 for( a in 1:length(stats_model_matrices) ) {
     meg_fitZig(data_list=AMR_analytic_data,
                data_names=AMR_analytic_names,
+               metadata=metadata,
                zero_mod=model.matrix(~1 + log(libSize(amr))),
                data_mod=stats_model_matrices[a],
                filter_min_threshold=0.15,
-               analytic_sample_names=metadata[[sample_column_id]],  # TODO: add sample subsetting here as an option
                contrast_list=stats_contrast_vars[[a]],
                random_effect_var=stats_random_effect[a],
                outdir=paste(stats_output_dir, 'AMR', stats_analysis_names[a],
                             sep='/', collapse=''),
                analysis_name=stats_analysis_names[a],
+               analysis_subset=stats_analysis_subsets[[a]],
                data_type='AMR',
                pval=0.05,
                top_hits=100)
     
     meg_fitZig(data_list=kraken_analytic_data,
                data_names=kraken_analytic_names,
+               metadata=metadata,
                zero_mod=model.matrix(~1 + log(libSize(kraken))),
                data_mod=stats_model_matrices[a],
                filter_min_threshold=0.15,
-               analytic_sample_names=metadata[[sample_column_id]],  # TODO: add sample subsetting here as an option
                contrast_list=stats_contrast_vars[[a]],
                random_effect_var=stats_random_effect[a],
                outdir=paste(stats_output_dir, 'Microbiome', stats_analysis_names[a],
                             sep='/', collapse=''),
                analysis_name=stats_analysis_names[a],
+               analysis_subset=stats_analysis_subsets[[a]],
                data_type='Microbiome',
                pval=0.05,
                top_hits=100)

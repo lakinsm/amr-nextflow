@@ -482,18 +482,19 @@ meg_barplot <- function(melted_data,
 
 meg_fitZig <- function(data_list,
                        data_names,
+                       metadata,
                        zero_mod,
                        data_mod,
                        filter_min_threshold,
-                       analytic_sample_names,
                        contrast_list,
                        random_effect_var,
                        outdir,
                        analysis_name,
+                       analysis_subset,
                        data_type,
                        pval=0.05,
                        top_hits=100) {
-    settings <- zigControl(maxit=50, verbose=T)
+    settings <- zigControl(maxit=50, verbose=F)
     
     local_obj <- data_list
     res <- list()
@@ -503,34 +504,50 @@ meg_fitZig <- function(data_list,
         if( filter_threshold > filter_min_threshold ) filter_threshold <- filter_min_threshold
         local_obj[[l]] <- local_obj[[l]][which(rowSums(MRcounts(local_obj[[l]])) >= filter_threshold ), ]
         
+        if( !is.na(analysis_subset[[1]]) ) {
+            local_meta <- data.table(pData(local_obj[[l]]))
+            local_subset <- which(local_meta[[analysis_subset[[1]]]] == analysis_subset[[2]])
+            local_obj[[l]] <- local_obj[[l]][, local_subset]
+        }
+        
         col_selection <- as.integer(which(colSums(MRcounts(local_obj[[l]]) > 0) > 1))
         local_obj[[l]] <- local_obj[[l]][, col_selection]
-        
-        print(l)
-        print(length(col_selection))
 
         mod_select <- model.matrix(eval(parse(text=data_mod)), data=pData(local_obj[[l]]))
         zero_mod_select <- zero_mod[col_selection, ]
         
         cumNorm(local_obj[[l]])  # This is a placeholder for metagenomeSeq; we don't actually use these values
         
-        if( is.na(random_effect_var) ) {
-            res[[l]] <- fitZig(obj=local_obj[[l]],
-                                   mod=mod_select,
-                                   zeroMod=zero_mod_select,
-                                   control=settings,
-                                   useCSSoffset=F)
-        }
-        else {
-            res[[l]] <- fitZig(obj=local_obj[[l]],
-                                   mod=mod_select,
-                                   zeroMod=zero_mod_select,
-                                   control=settings,
-                                   useCSSoffset=F,
-                                   useMixedModel=T,
-                                   block=pData(local_obj[[l]])[, random_effect_var])
-        }
-        
+        tryCatch(
+            {
+                if( is.na(random_effect_var) ) {
+                    res[[l]] <- fitZig(obj=local_obj[[l]],
+                                       mod=mod_select,
+                                       zeroMod=zero_mod_select,
+                                       control=settings,
+                                       useCSSoffset=F)
+                }
+                else {
+                    res[[l]] <- fitZig(obj=local_obj[[l]],
+                                       mod=mod_select,
+                                       zeroMod=zero_mod_select,
+                                       control=settings,
+                                       useCSSoffset=F,
+                                       useMixedModel=T,
+                                       block=pData(local_obj[[l]])[, random_effect_var])
+                }
+            },
+            error=function(e) {
+                print(paste('Model failed to converge for ', data_type, ' ', data_names[l], ' ', analysis_name,
+                      sep='', collapse=''))
+            },
+            finally={
+                if( length(res) != l ) {
+                    next
+                }
+            }
+        )
+
         local_contrasts <- contrast_list
         local_contrasts[[length(local_contrasts)+1]] <- res[[l]]$fit$design
         names(local_contrasts)[length(local_contrasts)] <- 'levels'
@@ -539,6 +556,8 @@ meg_fitZig <- function(data_list,
         colnames(contrast_matrix) <- make.names(contrast_list)
         
         contrast_fit <- contrasts.fit(res[[l]]$fit, contrast_matrix)
+        
+        
         contrast_fit <- topTable(eBayes(contrast_fit), p.value=pval, confint=T, number=top_hits)
         if( length(contrast_list) == 1 ) {
             write.csv(contrast_fit, file=paste(outdir, '/', analysis_name, '_', data_type, '_',
