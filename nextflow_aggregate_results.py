@@ -34,11 +34,11 @@ def amr_aggregate_results(file, A, L, N):
                     long_results[l] = float(result[4])
                 else:
                     long_results[l] += float(result[4])
-                sys.stdout.write('Gene,{},{},{}\n'.format(
-                    sample_id,
-                    result[2],
-                    result[4]
-                ))
+            sys.stdout.write('Gene,{},{},{}\n'.format(
+                sample_id,
+                result[2],
+                result[4]
+            ))
     for name, count in long_results.items():
         sys.stdout.write('{},{},{},{}\n'.format(
             N[L[name]],
