@@ -85,6 +85,7 @@ def kraken_load_analytic_data(dirpath):
                     ret[sample_id].setdefault(taxon_name, float(entry[2]))
                 except KeyError:
                     ret.setdefault(sample_id, {taxon_name: float(entry[2])})
+    print(ret)
     return dict_to_matrix(ret)
 
 
