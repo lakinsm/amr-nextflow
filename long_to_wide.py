@@ -69,23 +69,30 @@ def kraken_load_analytic_data(dirpath):
         with open(file, 'r') as f:
             data = f.read().split('\n')
             current_taxon = []
+            prior_count = 0
             for entry in data:
+                current_count = 0.0
                 if not entry:
                     continue
                 entry = entry.split()
+                if (entry[3] == '-') and (float(entry[2]) != 0.0):
+                    prior_count += float(entry[2])
+                elif entry[3] == '-':
+                    prior_count = 0
                 if entry[3] in ('-', 'U'):
                     continue
                 node_name = ' '.join(entry[5:])
                 current_taxon = current_taxon[:taxa_level[entry[3]]]
                 current_taxon.append(node_name)
-                if float(entry[2]) == 0:
+                if (float(entry[2]) == 0.0) and (prior_count == 0.0):
                     continue
+                else:
+                    current_count = float(entry[2]) + prior_count
                 taxon_name = '|'.join(current_taxon)
                 try:
-                    ret[sample_id].setdefault(taxon_name, float(entry[2]))
+                    ret[sample_id].setdefault(taxon_name, current_count)
                 except KeyError:
-                    ret.setdefault(sample_id, {taxon_name: float(entry[2])})
-    print(ret)
+                    ret.setdefault(sample_id, {taxon_name: current_count})
     return dict_to_matrix(ret)
 
 
@@ -154,7 +161,6 @@ if __name__ == '__main__':
     K, m, n = kraken_load_analytic_data(sys.argv[2])
     output_kraken_analytic_data(sys.argv[2], K, m, n)
     output_wide_data(sys.argv[3], S, L)
-    print(K, m, n)
     del S
     del L
     S, L = amr_load_long_data(sys.argv[4])
