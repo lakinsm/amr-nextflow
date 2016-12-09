@@ -177,7 +177,7 @@ process pivot_to_matrix {
 		mkdir "${params.output}/kraken_count_matrices"
 	fi
 	
-	long_to_wide.py ${params.output}/kraken_aggregated_output.csv ${params.output} ${params.output}/kraken_count_matrices ${params.output}/amr_aggregate_results.csv ${params.output}/amr_count_matrices
+	long_to_wide.py ${params.output}/kraken_aggregated_output.csv ${params.output} ${params.output}/kraken_count_matrices ${params.output}/AMR_aggregated_output.csv ${params.output}/amr_count_matrices
 	"""
 }
 

@@ -153,7 +153,7 @@ if __name__ == '__main__':
     K, m, n = kraken_load_analytic_data(sys.argv[2])
     output_kraken_analytic_data(sys.argv[2], K, m, n)
     output_wide_data(sys.argv[3], S, L)
-    print(M, m, n)
+    print(K, m, n)
     del S
     del L
     S, L = amr_load_long_data(sys.argv[4])
