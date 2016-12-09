@@ -147,13 +147,9 @@ process kraken_classification {
 process amr_aggregate_results {
 	maxForks 1
 	cache false
-	publishDir "${params.output}"
 	
 	input:
-	set dataset_id, file(amr_file) from amr_csa_files.toList()
-	
-	output:
-	file("${params.output}/AMR_aggregated_output.csv") into aggregated_output
+	set dataset_id, file(amr_file) from amr_csa_files
 	
 	"""
 	nextflow_aggregate_results.py AMR ${AMR_ANNOT} ${amr_file} >> ${params.output}/AMR_aggregated_output.csv
@@ -163,13 +159,9 @@ process amr_aggregate_results {
 process kraken_aggregate_results {
 	maxForks 1
 	cache false
-	publishDir "${params.output}"
 	
 	input:
-	set dataset_id, file(kraken_report_file) from kraken_report.toList()
-	
-	output:
-	file("${params.output}/kraken_aggregated_output.csv") into aggregated_output
+	set dataset_id, file(kraken_report_file) from kraken_report
 	
 	"""
 	nextflow_aggregate_results.py kraken ${kraken_report_file} >> ${params.output}/kraken_aggregated_output.csv
