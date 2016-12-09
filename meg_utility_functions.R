@@ -506,7 +506,13 @@ meg_fitZig <- function(data_list,
         
         if( !is.na(analysis_subset[[1]]) ) {
             local_meta <- data.table(pData(local_obj[[l]]))
-            local_subset <- which(local_meta[[analysis_subset[[1]]]] == analysis_subset[[2]])
+            for( pair in 0:((length(analysis_subset) / 2) - 1) ) {
+                local_subset <- which(local_meta[[analysis_subset[[(2*pair)+1]]]] == analysis_subset[[(2*pair)+2]])
+                
+                if( pair > 0 ) {
+                    local_meta <- local_subset
+                }
+            }
             local_obj[[l]] <- local_obj[[l]][, local_subset]
         }
         
