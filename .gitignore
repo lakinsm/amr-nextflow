@@ -39,3 +39,4 @@ coverage_sampler*
 # IDE files python
 .idea*
 
+toutput*
