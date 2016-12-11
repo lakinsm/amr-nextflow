@@ -150,6 +150,7 @@ process aggregate_results {
 	
 	input:
 	set dataset_id, file(amr_file) from amr_csa_files
+        set dataset_id2, file(kraken_file) from kraken_report
 	
 	output:
 	val dataset_id into completed_samples
