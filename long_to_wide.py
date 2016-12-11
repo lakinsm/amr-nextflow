@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 
 ## sys.argv:
-#   1. kraken_raw_output.csv
+#   1. AMR_aggregated_output.csv
 #   2. nextflow_output folder
-#   3. kraken_count_matrices folder
-#   4. AMR_raw_output.csv
-#   5. amr_count_matrices folder
 
 import sys
 import glob
@@ -15,33 +12,6 @@ taxa_level = {'D': 0, 'P': 1, 'C': 2, 'O': 3, 'F': 4, 'G': 5, 'S': 6}
 taxa_level_names = {1: 'Domain', 2: 'Phylum', 3: 'Class', 4: 'Order',
                     5: 'Family', 6: 'Genus', 7: 'Species', 8: 'Unclassified'}
 amr_level_names = {0: 'Class', 1: 'Mechanism', 2: 'Group'}
-
-
-def kraken_load_long_data(file):
-    samples = {}
-    labels = {}
-    with open(file, 'r') as f:
-        data = f.read().split('\n')
-        for entry in data:
-            if not entry:
-                continue
-            entry = entry.split(',')
-            try:
-                samples[entry[1]][entry[0]][entry[6]] = float(entry[2])
-            except KeyError:
-                try:
-                    samples[entry[1]][entry[0]].setdefault(entry[6], float(entry[2]))
-                except KeyError:
-                    try:
-                        samples[entry[1]].setdefault(entry[0], {entry[6]: float(entry[2])})
-                    except KeyError:
-                        samples.setdefault(entry[1], {entry[0]: {entry[6]: float(entry[2])}})
-            try:
-                if entry[6] not in labels[entry[1]]:
-                    labels[entry[1]] += (entry[6],)
-            except KeyError:
-                labels.setdefault(entry[1], (entry[6],))
-    return samples, labels
 
 
 def dict_to_matrix(D):
@@ -68,31 +38,61 @@ def kraken_load_analytic_data(dirpath):
         sample_id = file.split('/')[-1].replace('_kraken.report', '')
         with open(file, 'r') as f:
             data = f.read().split('\n')
-            current_taxon = []
-            prior_count = 0
+            assignment_list = [''] * 15
+            taxon_list = ['NA'] * 7
             for entry in data:
-                current_count = 0.0
                 if not entry:
                     continue
+                temp_name = entry.split('\t')[5]
+                space_level = int((len(temp_name) - len(temp_name.lstrip(' '))) / 2) - 2
+                if (space_level < 0) and (''.join(entry.split()[5:]) != 'Viruses'):
+                    continue
+                if space_level < 0:
+                    space_level = 0
                 entry = entry.split()
-                if (entry[3] == '-') and (float(entry[2]) != 0.0):
-                    prior_count += float(entry[2])
-                elif entry[3] == '-':
-                    prior_count = 0
-                if entry[3] in ('-', 'U'):
+                if entry[3] == 'U':
                     continue
                 node_name = ' '.join(entry[5:])
-                current_taxon = current_taxon[:taxa_level[entry[3]]]
-                current_taxon.append(node_name)
-                if (float(entry[2]) == 0.0) and (prior_count == 0.0):
-                    continue
+                assignment_list[space_level] = node_name
+                assignment_len = len(assignment_list) - assignment_list.count('')
+                if (space_level + 1) < assignment_len:
+                    assignment_list = assignment_list[:space_level + 1] + [''] * (14 - space_level)
+                if entry[3] == '-':
+                    temp_list = [x for x in taxon_list]
+                    while temp_list and temp_list[-1] == 'NA':
+                        temp_list.pop()
+                    if (space_level + 1) < assignment_len:
+                        iter_loc = space_level
+                        while True:
+                            if iter_loc == 0:
+                                break
+                            try:
+                                iter_loc = temp_list.index(assignment_list[iter_loc])
+                                break
+                            except ValueError:
+                                iter_loc -= 1
+                        temp_list = [x for x in taxon_list[:iter_loc + 1]]
+                        taxon_list = taxon_list[:iter_loc + 1] + ['NA'] * (6 - iter_loc)
+                    taxon_name = '|'.join(temp_list)
                 else:
-                    current_count = float(entry[2]) + prior_count
-                taxon_name = '|'.join(current_taxon)
+                    node_level = taxa_level[entry[3]]
+                    taxon_list[node_level] = node_name
+                    taxon_name = '|'.join(taxon_list[:node_level+1])
+                    taxon_len = len(taxon_list) - taxon_list.count('NA')
+                    if (node_level + 1) < taxon_len:
+                        taxon_list = taxon_list[:node_level + 1] + ['NA'] * (6 - node_level)
+                if node_name.strip() == 'Viruses':
+                    print(taxon_name)
+                    print(taxon_list)
+                    print(assignment_list)
+                    print('\n')
                 try:
-                    ret[sample_id].setdefault(taxon_name, current_count)
+                    ret[sample_id][taxon_name] += float(entry[2])
                 except KeyError:
-                    ret.setdefault(sample_id, {taxon_name: current_count})
+                    try:
+                        ret[sample_id].setdefault(taxon_name, float(entry[2]))
+                    except KeyError:
+                        ret.setdefault(sample_id, {taxon_name: float(entry[2])})
     return dict_to_matrix(ret)
 
 
@@ -123,46 +123,38 @@ def amr_load_long_data(file):
     return samples, labels
 
 
-def output_wide_data(outdir, S, L):
-    with open(outdir + '/../AMR_analytic_matrix.csv', 'w') as amr:
+def output_amr_analytic_data(outdir, S, L):
+    with open(outdir + '/AMR_analytic_matrix.csv', 'w') as amr:
         for flevel, sdict in S.items():
             local_sample_names = []
-            with open(outdir + '/' + flevel + '.csv', 'w') as out:
-                for sample in sdict.keys():
-                    local_sample_names.append(sample)
-                out.write(','.join(local_sample_names) + '\n')
+            for sample in sdict.keys():
+                local_sample_names.append(sample)
+            if flevel == 'Gene':
+                amr.write(','.join(local_sample_names) + '\n')
+            for label in L[flevel]:
+                local_counts = []
                 if flevel == 'Gene':
-                    amr.write(','.join(local_sample_names) + '\n')
-                for label in L[flevel]:
-                    local_counts = []
-                    if flevel == 'Gene':
-                        amr.write(label + ',')
-                    out.write(label + ',')
-                    for sample in local_sample_names:
-                        if label in sdict[sample]:
-                            local_counts.append(str(sdict[sample][label]))
-                        else:
-                            local_counts.append(str(0))
-                    if flevel == 'Gene':
-                        amr.write(','.join(local_counts) + '\n')
-                    out.write(','.join(local_counts) + '\n')
+                    amr.write(label + ',')
+                for sample in local_sample_names:
+                    if label in sdict[sample]:
+                        local_counts.append(str(sdict[sample][label]))
+                    else:
+                        local_counts.append(str(0))
+                if flevel == 'Gene':
+                    amr.write(','.join(local_counts) + '\n')
 
 
 def output_kraken_analytic_data(outdir, M, m_names, n_names):
     with open(outdir + '/kraken_analytic_matrix.csv', 'w') as out:
         out.write(','.join(n_names) + '\n')
         for i, row in enumerate(M):
-            out.write('{},'.format(m_names[i].replace(',', '_')))
+            out.write('{},'.format(m_names[i].replace(',', '')))
             out.write(','.join([str(x) for x in row]) + '\n')
 
 
 if __name__ == '__main__':
-    S, L = kraken_load_long_data(sys.argv[1])
     K, m, n = kraken_load_analytic_data(sys.argv[2])
     output_kraken_analytic_data(sys.argv[2], K, m, n)
-    output_wide_data(sys.argv[3], S, L)
-    del S
-    del L
-    S, L = amr_load_long_data(sys.argv[4])
-    output_wide_data(sys.argv[5], S, L)
+    S, L = amr_load_long_data(sys.argv[1])
+    output_amr_analytic_data(sys.argv[2], S, L)
 

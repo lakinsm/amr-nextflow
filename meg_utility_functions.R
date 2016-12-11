@@ -504,17 +504,18 @@ meg_fitZig <- function(data_list,
         if( filter_threshold > filter_min_threshold ) filter_threshold <- filter_min_threshold
         local_obj[[l]] <- local_obj[[l]][which(rowSums(MRcounts(local_obj[[l]])) >= filter_threshold ), ]
         
-        if( !is.na(analysis_subset[[1]]) ) {
-            local_meta <- data.table(pData(local_obj[[l]]))
-            for( pair in 0:((length(analysis_subset) / 2) - 1) ) {
-                local_subset <- which(local_meta[[analysis_subset[[(2*pair)+1]]]] == analysis_subset[[(2*pair)+2]])
-                
-                if( pair > 0 ) {
-                    local_meta <- local_subset
-                }
+
+        local_meta <- data.table(pData(local_obj[[l]]))
+        for( pair in 0:((length(analysis_subset) / 2) - 1) ) {
+        	if( !is.na(analysis_subset[[(2*pair)+1]]) ) {
+				local_subset <- which(local_meta[[analysis_subset[[(2*pair)+1]]]] == analysis_subset[[(2*pair)+2]])
+				
+				if( pair > 0 ) {
+				    local_meta <- local_subset
+				}
             }
-            local_obj[[l]] <- local_obj[[l]][, local_subset]
         }
+        local_obj[[l]] <- local_obj[[l]][, local_subset]
         
         col_selection <- as.integer(which(colSums(MRcounts(local_obj[[l]]) > 0) > 1))
         local_obj[[l]] <- local_obj[[l]][, col_selection]

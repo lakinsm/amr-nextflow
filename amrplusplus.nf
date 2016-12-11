@@ -145,19 +145,17 @@ process kraken_classification {
 }
 
 process aggregate_results {
-	maxForks 1
+	maxForks 15
 	cache false
 	
 	input:
 	set dataset_id, file(amr_file) from amr_csa_files
-	set dataset_id2, file(kraken_report_file) from kraken_report
 	
 	output:
 	val dataset_id into completed_samples
 	
 	"""
 	nextflow_aggregate_results.py AMR ${AMR_ANNOT} ${amr_file} >> ${params.output}/AMR_aggregated_output.csv
-	nextflow_aggregate_results.py kraken ${kraken_report_file} >> ${params.output}/kraken_aggregated_output.csv
 	"""
 }
 
@@ -169,15 +167,7 @@ process pivot_to_matrix {
 	val dataset_id from completed_samples.toList()
 	
 	"""
-	#!/usr/bin/env bash
-	if [ ! -d "${params.output}/amr_count_matrices" ]; then
-		mkdir "${params.output}/amr_count_matrices"
-	fi
-	if [ ! -d "${params.output}/kraken_count_matrices" ]; then
-		mkdir "${params.output}/kraken_count_matrices"
-	fi
-	
-	long_to_wide.py ${params.output}/kraken_aggregated_output.csv ${params.output} ${params.output}/kraken_count_matrices ${params.output}/AMR_aggregated_output.csv ${params.output}/amr_count_matrices
+	long_to_wide.py ${params.output}/AMR_aggregated_output.csv ${params.output}
 	"""
 }
 
