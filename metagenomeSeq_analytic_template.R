@@ -217,7 +217,9 @@ for( dtype in c('AMR', 'Microbiome') ) {
 
 
 # Load the data, MEGARes annotations, and metadata
-kraken <- newMRexperiment(read.table('kraken_analytic_matrix.csv', header=T, row.names=1, sep=','))
+temp_kraken <- read.table('kraken_analytic_matrix.csv', header=T, row.names=1, sep=',')
+kraken <- newMRexperiment(temp_kraken[rowSums(temp_kraken) > 0, ])
+kraken <- newMRexperiment(temp_kraken)
 amr <- newMRexperiment(read.table('AMR_analytic_matrix.csv', header=T, row.names=1, sep=','))
 annotations <- data.table(read.csv('megares_annotations.csv', header=T))
 setkey(annotations, header)  # Data tables are SQL objects with optional primary keys

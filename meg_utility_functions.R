@@ -492,8 +492,8 @@ meg_fitZig <- function(data_list,
                        analysis_name,
                        analysis_subset,
                        data_type,
-                       pval=0.05,
-                       top_hits=100) {
+                       pval=0.1,
+                       top_hits=200) {
     settings <- zigControl(maxit=50, verbose=F)
     
     local_obj <- data_list
@@ -566,16 +566,22 @@ meg_fitZig <- function(data_list,
         
         
         contrast_fit <- topTable(eBayes(contrast_fit), p.value=pval, confint=T, number=top_hits)
-        if( length(contrast_list) == 1 ) {
-            write.csv(contrast_fit, file=paste(outdir, '/', analysis_name, '_', data_type, '_',
-                                               data_names[l], '_',
-                                               contrast_list[1], '_Model_Contrasts.csv',
-                                               sep='', collapse=''), quote=F)
+        if( nrow(contrast_fit) > 0 ) {
+            if( length(contrast_list) == 1 ) {
+                write.csv(contrast_fit, file=paste(outdir, '/', analysis_name, '_', data_type, '_',
+                                                   data_names[l], '_',
+                                                   contrast_list[1], '_Model_Contrasts.csv',
+                                                   sep='', collapse=''), quote=F)
+            }
+            else {
+                write.csv(contrast_fit, file=paste(outdir, '/', analysis_name, '_', data_type, '_',
+                                                   data_names[l], '_Model_Contrasts.csv',
+                                                   sep='', collapse=''), quote=F)
+            }
         }
         else {
-            write.csv(contrast_fit, file=paste(outdir, '/', analysis_name, '_', data_type, '_',
-                                               data_names[l], '_Model_Contrasts.csv',
-                                               sep='', collapse=''), quote=F)
+            print(paste('No significant results for ', data_type, ' ', data_names[l], ' ', analysis_name,
+                        sep='', collapse=''))
         }
     }
 }
