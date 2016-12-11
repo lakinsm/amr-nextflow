@@ -81,11 +81,6 @@ def kraken_load_analytic_data(dirpath):
                     taxon_len = len(taxon_list) - taxon_list.count('NA')
                     if (node_level + 1) < taxon_len:
                         taxon_list = taxon_list[:node_level + 1] + ['NA'] * (6 - node_level)
-                if node_name.strip() == 'Viruses':
-                    print(taxon_name)
-                    print(taxon_list)
-                    print(assignment_list)
-                    print('\n')
                 try:
                     ret[sample_id][taxon_name] += float(entry[2])
                 except KeyError:
