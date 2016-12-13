@@ -87,6 +87,7 @@ meg_ordination <- function(data_list,
         
         # Transpose the matrix for NMDS (groups are now in rows and features in columns)
         t_data <- t(MRcounts(data_list[[l]]))
+        t_data <- t_data[which(!is.na(metadata[[sample_var]]) & metadata[[sample_var]] != 'NA'), colSums(t_data) > 0]
         
         if( method == 'NMDS' ) {
             # Set parallel to whatever your computer can support in terms of CPU count
@@ -506,16 +507,19 @@ meg_fitZig <- function(data_list,
         
 
         local_meta <- data.table(pData(local_obj[[l]]))
+        local_subset <- c()
         for( pair in 0:((length(analysis_subset) / 2) - 1) ) {
         	if( !is.na(analysis_subset[[(2*pair)+1]]) ) {
-				local_subset <- which(local_meta[[analysis_subset[[(2*pair)+1]]]] == analysis_subset[[(2*pair)+2]])
+			    local_subset <- c(local_subset,
+			                      which(local_meta[[analysis_subset[[(2*pair)+1]]]] == analysis_subset[[(2*pair)+2]]))
 				
-				if( pair > 0 ) {
-				    local_meta <- local_subset
-				}
-            }
+        	}
         }
-        local_obj[[l]] <- local_obj[[l]][, local_subset]
+        
+        if(length(local_subset) > 0){
+            local_subset <- unique(local_subset)
+            local_obj[[l]] <- local_obj[[l]][, local_subset]
+        }
         
         col_selection <- as.integer(which(colSums(MRcounts(local_obj[[l]]) > 0) > 1))
         local_obj[[l]] <- local_obj[[l]][, col_selection]
