@@ -44,8 +44,8 @@ def kraken_load_analytic_data(dirpath):
                 if not entry:
                     continue
                 temp_name = entry.split('\t')[5]
-                space_level = int((len(temp_name) - len(temp_name.lstrip(' '))) / 2) - 2
-                if (space_level < 0) and (''.join(entry.split()[5:]) != 'Viruses'):
+                space_level = int((len(temp_name) - len(temp_name.lstrip(' '))) / 2) - 1
+                if (space_level <= 0) and (''.join(entry.split()[5:]) not in ('Viruses', 'Bacteria', 'Archaea')):
                     continue
                 if space_level < 0:
                     space_level = 0
@@ -57,30 +57,33 @@ def kraken_load_analytic_data(dirpath):
                 assignment_len = len(assignment_list) - assignment_list.count('')
                 if (space_level + 1) < assignment_len:
                     assignment_list = assignment_list[:space_level + 1] + [''] * (14 - space_level)
-                if entry[3] == '-':
-                    temp_list = [x for x in taxon_list]
-                    while temp_list and temp_list[-1] == 'NA':
-                        temp_list.pop()
-                    if (space_level + 1) < assignment_len:
-                        iter_loc = space_level
-                        while True:
-                            if iter_loc == 0:
-                                break
-                            try:
-                                iter_loc = temp_list.index(assignment_list[iter_loc])
-                                break
-                            except ValueError:
-                                iter_loc -= 1
-                        temp_list = [x for x in taxon_list[:iter_loc + 1]]
-                        taxon_list = taxon_list[:iter_loc + 1] + ['NA'] * (6 - iter_loc)
-                    taxon_name = '|'.join(temp_list)
-                else:
+                if entry[3] != '-':
                     node_level = taxa_level[entry[3]]
                     taxon_list[node_level] = node_name
                     taxon_name = '|'.join(taxon_list[:node_level+1])
                     taxon_len = len(taxon_list) - taxon_list.count('NA')
                     if (node_level + 1) < taxon_len:
                         taxon_list = taxon_list[:node_level + 1] + ['NA'] * (6 - node_level)
+                temp_list = [x for x in taxon_list]
+                if entry[3] == '-':
+                    temp_list = [x for x in taxon_list]
+                    while temp_list and temp_list[-1] == 'NA':
+                        temp_list.pop()
+                if (space_level + 1) < assignment_len:
+                    iter_loc = space_level + 1
+                    while True:
+                        if iter_loc == 0:
+                            break
+                        try:
+                            iter_loc = temp_list.index(assignment_list[iter_loc])
+                            break
+                        except ValueError:
+                            iter_loc -= 1
+                    temp_list = [x for x in taxon_list[:iter_loc + 1]]
+                    taxon_list = taxon_list[:iter_loc + 1] + ['NA'] * (6 - iter_loc)
+                    taxon_name = '|'.join(temp_list)
+                if float(entry[2]) == 0.0:
+                    continue
                 try:
                     ret[sample_id][taxon_name] += float(entry[2])
                 except KeyError:
