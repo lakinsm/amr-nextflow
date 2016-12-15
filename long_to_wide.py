@@ -146,7 +146,7 @@ def output_kraken_analytic_data(outdir, M, m_names, n_names):
     with open(outdir + '/kraken_analytic_matrix.csv', 'w') as out:
         out.write(','.join(n_names) + '\n')
         for i, row in enumerate(M):
-            out.write('{},'.format(m_names[i].replace(',', '')))
+            out.write('\"{}\",'.format(m_names[i].replace(',', '')))
             out.write(','.join([str(x) for x in row]) + '\n')
 
 
