@@ -41,61 +41,72 @@ stats_output_dir = 'stats'
 
 
 # Where is the metadata file stored on your machine?
-metadata_filepath = 'metadata.csv'
+metadata_filepath = 'project_metadata.csv'
+
+
+# Name of the megares annotation file used for this project
+megares_annotation_filename = 'megares_annotations_v1.01.csv'
 
 
 # In which column of the metadata file are the sample IDs stored?
 sample_column_id = 'ID'
 
 
-# The following is a list of column names in your metadata.csv file that you want
+# The following is a list of analyses based on variables in 
+# your metadata.csv file that you want
 # to use for EXPLORATORY analysis (NMDS, PCA, alpha rarefaction, barplots)
-exploratory_vars = c('Location', 'Type')
-
-
-# The following is a list of strings specifying the formula for your
-# model matrices (will be passed to model.matrix) that you want
-# to use for STATISTICAL analyses.  An example is given below.
-stats_model_matrices = list(
-    '~ 0 + Type',
-    '~ 0 + Type'
+exploratory_analyses = list(
+    # Analysis 1
+    # Description: 
+    list(
+        name = 'Variable1',
+        subsets = list(),
+        exploratory_var = 'Variable1'
+    ),
+    
+    # Analysis 2
+    # Description: 
+    list(
+        name = 'Variable2_Variable1_Subset',
+        subsets = list('Variable1 == Value1'),
+        exploratory_var = 'Variable2'
+    )
 )
 
 
-# The following is a list of character lists, where each string includes the variables that
-# you desire contrasts for a given model matrix.  For instance, the second vector
-# in this list of vectors corresponds to the second model matrix in the previous
-# list of model matrices.  An example is given below.
-stats_contrast_vars = list(
-    list('TypeVar1 - TypeVar2',
-      'TypeVar1 - TypeVar3',
-      'TypeVar2 - TypeVar3'),
-
-    list('TypeVar1 - TypeVar2',
-         'TypeVar1 - TypeVar3',
-         'TypeVar2 - TypeVar3')
+# Each analyses you wish to perform should have its own list in the following
+# statistical_analyses list.  A template is provided to get you started.
+# Multiple analyses, subsets, and contrasts are valid, but only one random
+# effect can be used per analysis.  The contrasts of interest must have their
+# parent variable in the model matrix equation.  Contrasts are named by
+# parent variable then child variable without a space inbetween, for example:
+# PVar1Cvar1 where the model matrix equation is ~ 0 + Pvar1.
+statistical_analyses = list(
+  # Analysis 1
+  # Description: 
+  list(
+    name = 'Variable1',
+    subsets = list(),
+    model_matrix = '~ 0 + Variable1 + Variable2',
+    contrasts = list('Variable1Value1 - Variable1Value2'),
+    random_effect = NA
+  ),
+  
+  # Analysis 2
+  # Description: 
+  list(
+    name = 'Variable2_Variable1_Subset',
+    subsets = list('Variable1 == Value1'),
+    model_matrix = '~ 0 + Variable2',
+    contrasts = list('Variable2Value1 - Variable2Value2',
+                     'Variable2Value1 - Variable2Value3',
+                     'Variable2Value2 - Variable2Value3'),
+    random_effect = NA
+  )
 )
 
 
-# If you wish to use RANDOM EFFECTS in the statistical analysis,
-# specify a single variable for each model matrix in the above model matrix
-# list.  If no random effect is desired, then put NA.
-stats_random_effect = c(NA, 'Location')
 
-
-# Optional vector of names for your statistical model matrices.  These will be
-# used to name the files for the statistical output.
-stats_analysis_names = c('TypeNoRandom', 'TypeLocationRandom')
-
-
-# The following are a list of column subsets to be evaluated for
-# each statistical analysis.  If you desire a subset of the data
-# to be analyzed, then put the sample metadata type and its
-# value here for each analysis, else NA.  For example:
-stats_analysis_subsets = list(
-    list(NA, NA),
-    list('Type', 'Var1')
-)
 
 
 
@@ -103,17 +114,6 @@ stats_analysis_subsets = list(
 ## Automated Code ##
 ####################
 ## Modify this as necessary, though you shouldn't need to for basic use.
-
-
-## Check to see that the user input the stats lists correctly
-if(length(unique(sapply(list(stats_analysis_subsets,
-                             stats_model_matrices,
-                             stats_contrast_vars,
-                             stats_random_effect,
-                             stats_analysis_names), FUN=length))) != 1) {
-    stop('The length of all \"stats\" variables in the user input must be the same,
-         i.e. the length of each input should equal the number of analyses performed.')
-}
 
 # Source the utility functions file, which should be in the scripts folder with this file
 source('scripts/meg_utility_functions.R')
@@ -200,28 +200,38 @@ for( dtype in c('AMR', 'Microbiome') ) {
     ifelse(!dir.exists(file.path(graph_output_dir, dtype)),
            dir.create(file.path(graph_output_dir, dtype), mode='777'), FALSE)
     
-    for( v in 1:length(exploratory_vars) ) {
-        ifelse(!dir.exists(file.path(graph_output_dir, dtype, exploratory_vars[v])),
-               dir.create(file.path(graph_output_dir, dtype, exploratory_vars[v]), mode='777'), FALSE)
+    for( v in 1:length(exploratory_analyses) ) {
+        ifelse(!dir.exists(file.path(graph_output_dir, dtype, exploratory_analyses[[v]]$name)),
+               dir.create(file.path(graph_output_dir, dtype, exploratory_analyses[[v]]$name), mode='777'), FALSE)
     }
     
     ifelse(!dir.exists(file.path(stats_output_dir, dtype)),
            dir.create(file.path(stats_output_dir, dtype), mode='777'), FALSE)
     
-    for( a in 1:length(stats_analysis_names) ) {
-        ifelse(!dir.exists(file.path(stats_output_dir, dtype, stats_analysis_names[a])),
-               dir.create(file.path(stats_output_dir, dtype, stats_analysis_names[a]), mode='777'), FALSE)
+    for( a in 1:length(statistical_analyses) ) {
+        ifelse(!dir.exists(file.path(stats_output_dir, dtype, statistical_analyses[[a]]$name)),
+               dir.create(file.path(stats_output_dir, dtype, statistical_analyses[[a]]$name), mode='777'), FALSE)
     }
 }
+
+ifelse(!dir.exists(file.path('amr_matrices')), dir.create(file.path('amr_matrices'), mode='777'), FALSE)
+ifelse(!dir.exists(file.path('kraken_matrices')), dir.create(file.path('kraken_matrices'), mode='777'), FALSE)
+
+ifelse(!dir.exists(file.path('amr_matrices/sparse_normalized')), dir.create(file.path('amr_matrices/sparse_normalized'), mode='777'), FALSE)
+ifelse(!dir.exists(file.path('amr_matrices/normalized')), dir.create(file.path('amr_matrices/normalized'), mode='777'), FALSE)
+ifelse(!dir.exists(file.path('amr_matrices/raw')), dir.create(file.path('amr_matrices/raw'), mode='777'), FALSE)
+
+ifelse(!dir.exists(file.path('kraken_matrices/sparse_normalized')), dir.create(file.path('kraken_matrices/sparse_normalized'), mode='777'), FALSE)
+ifelse(!dir.exists(file.path('kraken_matrices/normalized')), dir.create(file.path('kraken_matrices/normalized'), mode='777'), FALSE)
+ifelse(!dir.exists(file.path('kraken_matrices/raw')), dir.create(file.path('kraken_matrices/raw'), mode='777'), FALSE)
 
 
 
 # Load the data, MEGARes annotations, and metadata
 temp_kraken <- read.table('kraken_analytic_matrix.csv', header=T, row.names=1, sep=',')
 kraken <- newMRexperiment(temp_kraken[rowSums(temp_kraken) > 0, ])
-kraken <- newMRexperiment(temp_kraken)
 amr <- newMRexperiment(read.table('AMR_analytic_matrix.csv', header=T, row.names=1, sep=','))
-annotations <- data.table(read.csv('megares_annotations.csv', header=T))
+annotations <- data.table(read.csv(megares_annotation_filename, header=T))
 setkey(annotations, header)  # Data tables are SQL objects with optional primary keys
 
 metadata <- read.csv(metadata_filepath, header=T)
@@ -476,14 +486,15 @@ for( l in 1:length(kraken_raw_analytic_data) ) {
 #############################################
 ## Exploratory Analyses: Alpha Rarefaction ##
 #############################################
-for( v in 1:length(exploratory_vars) ) {
+for( v in 1:length(exploratory_analyses) ) {
     # AMR
     meg_alpha_rarefaction(data_list=AMR_raw_analytic_data,
                           data_names=AMR_raw_analytic_names,
                           metadata=metadata,
                           sample_var=sample_column_id,
-                          group_var=exploratory_vars[v],
-                          outdir=paste(graph_output_dir, 'AMR', exploratory_vars[v],
+                          group_var=exploratory_analyses[[v]]$exploratory_var,
+                          analysis_subset=exploratory_analyses[[v]]$subsets,
+                          outdir=paste(graph_output_dir, 'AMR', exploratory_analyses[[v]]$name,
                                        sep='/', collapse=''),
                           data_type='AMR')
     
@@ -492,8 +503,9 @@ for( v in 1:length(exploratory_vars) ) {
                           data_names=kraken_raw_analytic_names,
                           metadata=metadata,
                           sample_var=sample_column_id,
-                          group_var=exploratory_vars[v],
-                          outdir=paste(graph_output_dir, 'Microbiome', exploratory_vars[v],
+                          group_var=exploratory_analyses[[v]]$exploratory_var,
+                          analysis_subset=exploratory_analyses[[v]]$subsets,
+                          outdir=paste(graph_output_dir, 'Microbiome', exploratory_analyses[[v]]$name,
                                        sep='/', collapse=''),
                           data_type='Microbiome')
 }
@@ -502,14 +514,15 @@ for( v in 1:length(exploratory_vars) ) {
 ######################################
 ## Exploratory Analyses: Ordination ##
 ######################################
-for( v in 1:length(exploratory_vars) ) {
+for( v in 1:length(exploratory_analyses) ) {
     # AMR NMDS
     meg_ordination(data_list = AMR_analytic_data,
                    data_names = AMR_analytic_names,
                    metadata = metadata,
                    sample_var = sample_column_id,
-                   hull_var = exploratory_vars[v],
-                   outdir = paste(graph_output_dir, 'AMR', exploratory_vars[v],
+                   hull_var = exploratory_analyses[[v]]$exploratory_var,
+                   analysis_subset=exploratory_analyses[[v]]$subsets,
+                   outdir = paste(graph_output_dir, 'AMR', exploratory_analyses[[v]]$name,
                                   sep='/', collapse=''),
                    data_type = 'AMR',
                    method = 'NMDS')
@@ -519,8 +532,9 @@ for( v in 1:length(exploratory_vars) ) {
                    data_names = AMR_analytic_names,
                    metadata = metadata,
                    sample_var = sample_column_id,
-                   hull_var = exploratory_vars[v],
-                   outdir = paste(graph_output_dir, 'AMR', exploratory_vars[v],
+                   hull_var = exploratory_analyses[[v]]$exploratory_var,
+                   analysis_subset=exploratory_analyses[[v]]$subsets,
+                   outdir = paste(graph_output_dir, 'AMR', exploratory_analyses[[v]]$name,
                                   sep='/', collapse=''),
                    data_type = 'AMR',
                    method = 'PCA')
@@ -530,8 +544,9 @@ for( v in 1:length(exploratory_vars) ) {
                    data_names = kraken_analytic_names,
                    metadata = metadata,
                    sample_var = sample_column_id,
-                   hull_var = exploratory_vars[v],
-                   outdir = paste(graph_output_dir, 'Microbiome', exploratory_vars[v],
+                   hull_var = exploratory_analyses[[v]]$exploratory_var,
+                   analysis_subset=exploratory_analyses[[v]]$subsets,
+                   outdir = paste(graph_output_dir, 'Microbiome', exploratory_analyses[[v]]$name,
                                   sep='/', collapse=''),
                    data_type = 'Microbiome',
                    method = 'NMDS')
@@ -541,8 +556,9 @@ for( v in 1:length(exploratory_vars) ) {
                    data_names = kraken_analytic_names,
                    metadata = metadata,
                    sample_var = sample_column_id,
-                   hull_var = exploratory_vars[v],
-                   outdir = paste(graph_output_dir, 'Microbiome', exploratory_vars[v],
+                   hull_var = exploratory_analyses[[v]]$exploratory_var,
+                   analysis_subset=exploratory_analyses[[v]]$subsets,
+                   outdir = paste(graph_output_dir, 'Microbiome', exploratory_analyses[[v]]$name,
                                   sep='/', collapse=''),
                    data_type = 'Microbiome',
                    method = 'PCA')
@@ -554,28 +570,30 @@ for( v in 1:length(exploratory_vars) ) {
 ####################################
 
 # AMR Heatmaps for each level
-for( v in 1:length(exploratory_vars) ) {
+for( v in 1:length(exploratory_analyses) ) {
     for( l in 1:length(AMR_analytic_names) ) {
         meg_heatmap(melted_data=amr_melted_analytic,
                     metadata=metadata,
                     sample_var=sample_column_id,
-                    group_var=exploratory_vars[v],
+                    group_var=exploratory_analyses[[v]]$exploratory_var,
                     level_var=AMR_analytic_names[l],
-                    outdir=paste(graph_output_dir, 'AMR', exploratory_vars[v],
+                    analysis_subset=exploratory_analyses[[v]]$subsets,
+                    outdir=paste(graph_output_dir, 'AMR', exploratory_analyses[[v]]$name,
                                  sep='/', collapse=''),
                     data_type='AMR')
     }
 }
 
 # Microbiome
-for( v in 1:length(exploratory_vars) ) {
+for( v in 1:length(exploratory_analyses) ) {
     for( l in 1:length(kraken_analytic_names) ) {
         meg_heatmap(melted_data=kraken_melted_analytic,
                     metadata=metadata,
                     sample_var=sample_column_id,
-                    group_var=exploratory_vars[v],
+                    group_var=exploratory_analyses[[v]]$exploratory_var,
                     level_var=kraken_analytic_names[l],
-                    outdir=paste(graph_output_dir, 'Microbiome', exploratory_vars[v],
+                    analysis_subset=exploratory_analyses[[v]]$subsets,
+                    outdir=paste(graph_output_dir, 'Microbiome', exploratory_analyses[[v]]$name,
                                  sep='/', collapse=''),
                     data_type='Microbiome')
     }
@@ -587,15 +605,16 @@ for( v in 1:length(exploratory_vars) ) {
 ####################################
 
 # AMR
-for( v in 1:length(exploratory_vars) ) {
+for( v in 1:length(exploratory_analyses) ) {
     for( l in 1:length(AMR_analytic_names) ) {
         suppressWarnings(
             meg_barplot(melted_data=amr_melted_analytic,
                     metadata=metadata,
                     sample_var=sample_column_id,
-                    group_var=exploratory_vars[v],
+                    group_var=exploratory_analyses[[v]]$exploratory_var,
                     level_var=AMR_analytic_names[l],
-                    outdir=paste(graph_output_dir, 'AMR', exploratory_vars[v],
+                    analysis_subset=exploratory_analyses[[v]]$subsets,
+                    outdir=paste(graph_output_dir, 'AMR', exploratory_analyses[[v]]$name,
                                  sep='/', collapse=''),
                     data_type='AMR')
         )
@@ -603,15 +622,16 @@ for( v in 1:length(exploratory_vars) ) {
 }
 
 # Microbiome
-for( v in 1:length(exploratory_vars) ) {
+for( v in 1:length(exploratory_analyses) ) {
     for( l in 1:length(kraken_analytic_names) ) {
         suppressWarnings(
             meg_barplot(melted_data=kraken_melted_analytic,
                     metadata=metadata,
                     sample_var=sample_column_id,
-                    group_var=exploratory_vars[v],
+                    group_var=exploratory_analyses[[v]]$exploratory_var,
                     level_var=kraken_analytic_names[l],
-                    outdir=paste(graph_output_dir, 'Microbiome', exploratory_vars[v],
+                    analysis_subset=exploratory_analyses[[v]]$subsets,
+                    outdir=paste(graph_output_dir, 'Microbiome', exploratory_analyses[[v]]$name,
                                  sep='/', collapse=''),
                     data_type='Microbiome')
         )
@@ -622,42 +642,108 @@ for( v in 1:length(exploratory_vars) ) {
 ##########################
 ## Statistical Analyses ##
 ##########################
-for( a in 1:length(stats_model_matrices) ) {
+for( a in 1:length(statistical_analyses) ) {
     meg_fitZig(data_list=AMR_analytic_data,
                data_names=AMR_analytic_names,
                metadata=metadata,
                zero_mod=model.matrix(~1 + log(libSize(amr))),
-               data_mod=stats_model_matrices[a],
+               data_mod=statistical_analyses[[a]]$model_matrix,
                filter_min_threshold=0.15,
-               contrast_list=stats_contrast_vars[[a]],
-               random_effect_var=stats_random_effect[a],
-               outdir=paste(stats_output_dir, 'AMR', stats_analysis_names[a],
+               contrast_list=statistical_analyses[[a]]$contrasts,
+               random_effect_var=statistical_analyses[[a]]$random_effect,
+               outdir=paste(stats_output_dir, 'AMR', statistical_analyses[[a]]$name,
                             sep='/', collapse=''),
-               analysis_name=stats_analysis_names[a],
-               analysis_subset=stats_analysis_subsets[[a]],
+               analysis_name=statistical_analyses[[a]]$name,
+               analysis_subset=statistical_analyses[[a]]$subsets,
                data_type='AMR',
-               pval=0.05,
-               top_hits=100)
+               pval=0.1,
+               top_hits=1000)
     
     meg_fitZig(data_list=kraken_analytic_data,
                data_names=kraken_analytic_names,
                metadata=metadata,
                zero_mod=model.matrix(~1 + log(libSize(kraken))),
-               data_mod=stats_model_matrices[a],
+               data_mod=statistical_analyses[[a]]$model_matrix,
                filter_min_threshold=0.15,
-               contrast_list=stats_contrast_vars[[a]],
-               random_effect_var=stats_random_effect[a],
-               outdir=paste(stats_output_dir, 'Microbiome', stats_analysis_names[a],
+               contrast_list=statistical_analyses[[a]]$contrasts,
+               random_effect_var=statistical_analyses[[a]]$random_effect,
+               outdir=paste(stats_output_dir, 'Microbiome', statistical_analyses[[a]]$name,
                             sep='/', collapse=''),
-               analysis_name=stats_analysis_names[a],
-               analysis_subset=stats_analysis_subsets[[a]],
+               analysis_name=statistical_analyses[[a]]$name,
+               analysis_subset=statistical_analyses[[a]]$subsets,
                data_type='Microbiome',
-               pval=0.05,
-               top_hits=100)
+               pval=0.1,
+               top_hits=1000)
 }
 
 
+########################
+## Output of matrices ##
+########################
+write.csv(make_sparse(amr_class, 'class', c('class')), 'amr_matrices/sparse_normalized/AMR_Class_Sparse_Normalized.csv',
+          row.names=T)
+write.table(amr_class, 'amr_matrices/normalized/AMR_Class_Normalized.csv', sep=',', row.names = F, col.names = T)
+write.table(amr_class_raw, 'amr_matrices/raw/AMR_Class_Raw.csv', sep=',', row.names = F, col.names = T)
 
+
+write.csv(make_sparse(amr_mech, 'mechanism', c('mechanism')), 'amr_matrices/sparse_normalized/AMR_Mechanism_Sparse_Normalized.csv',
+          row.names=T)
+write.table(amr_mech, 'amr_matrices/normalized/AMR_Mechanism_Normalized.csv', sep=',', row.names = F, col.names = T)
+write.table(amr_mech_raw, 'amr_matrices/raw/AMR_Mechanism_Raw.csv', sep=',', row.names = F, col.names = T)
+
+write.csv(make_sparse(amr_group, 'group', c('group')), 'amr_matrices/sparse_normalized/AMR_Group_Sparse_Normalized.csv',
+          row.names=T)
+write.table(amr_group, 'amr_matrices/normalized/AMR_Group_Normalized.csv', sep=',', row.names = F, col.names = T)
+write.table(amr_mech_raw, 'amr_matrices/raw/AMR_Group_Raw.csv', sep=',', row.names = F, col.names = T)
+
+write.csv(make_sparse(amr_norm, 'header', c('header', 'class', 'mechanism', 'group')),
+          'amr_matrices/sparse_normalized/AMR_Gene_Sparse_Normalized.csv',
+          row.names=T)
+write.table(amr_norm, 'amr_matrices/normalized/AMR_Gene_Normalized.csv', sep=',', row.names = F, col.names = T)
+write.table(amr_raw, 'amr_matrices/raw/AMR_Gene_Raw.csv', sep=',', row.names = F, col.names = T)
+
+
+write.csv(make_sparse(kraken_domain, 'Domain', c('Domain')),
+          'kraken_matrices/sparse_normalized/kraken_Domain_Sparse_Normalized.csv',
+          row.names=T)
+write.table(kraken_domain, 'kraken_matrices/normalized/kraken_Domain_Normalized.csv', sep=',', row.names=F, col.names=T)
+write.table(kraken_domain_raw, 'kraken_matrices/raw/kraken_Domain_Raw.csv', sep=',', row.names=F, col.names=T)
+
+write.csv(make_sparse(kraken_phylum, 'Phylum', c('Phylum')),
+          'kraken_matrices/sparse_normalized/kraken_Phylum_Sparse_Normalized.csv',
+          row.names=T)
+write.table(kraken_phylum, 'kraken_matrices/normalized/kraken_Phylum_Normalized.csv', sep=',', row.names=F, col.names=T)
+write.table(kraken_phylum_raw, 'kraken_matrices/raw/kraken_Phylum_Raw.csv', sep=',', row.names=F, col.names=T)
+
+write.csv(make_sparse(kraken_class, 'Class', c('Class')),
+          'kraken_matrices/sparse_normalized/kraken_Class_Sparse_Normalized.csv',
+          row.names=T)
+write.table(kraken_class, 'kraken_matrices/normalized/kraken_Class_Normalized.csv', sep=',', row.names=F, col.names=T)
+write.table(kraken_class_raw, 'kraken_matrices/raw/kraken_Class_Raw.csv', sep=',', row.names=F, col.names=T)
+
+write.csv(make_sparse(kraken_order, 'Order', c('Order')),
+          'kraken_matrices/sparse_normalized/kraken_Order_Sparse_Normalized.csv',
+          row.names=T)
+write.table(kraken_order, 'kraken_matrices/normalized/kraken_Order_Normalized.csv', sep=',', row.names=F, col.names=T)
+write.table(kraken_order_raw, 'kraken_matrices/raw/kraken_Order_Raw.csv', sep=',', row.names=F, col.names=T)
+
+write.csv(make_sparse(kraken_family, 'Family', c('Family')),
+          'kraken_matrices/sparse_normalized/kraken_Family_Sparse_Normalized.csv',
+          row.names=T)
+write.table(kraken_family, 'kraken_matrices/normalized/kraken_Family_Normalized.csv', sep=',', row.names=F, col.names=T)
+write.table(kraken_family_raw, 'kraken_matrices/raw/kraken_Family_Raw.csv', sep=',', row.names=F, col.names=T)
+
+write.csv(make_sparse(kraken_genus, 'Genus', c('Genus')),
+          'kraken_matrices/sparse_normalized/kraken_Genus_Sparse_Normalized.csv',
+          row.names=T)
+write.table(kraken_genus, 'kraken_matrices/normalized/kraken_Genus_Normalized.csv', sep=',', row.names=F, col.names=T)
+write.table(kraken_genus_raw, 'kraken_matrices/raw/kraken_Genus_Raw.csv', sep=',', row.names=F, col.names=T)
+
+write.csv(make_sparse(kraken_species, 'Species', c('Species')),
+          'kraken_matrices/sparse_normalized/kraken_Species_Sparse_Normalized.csv',
+          row.names=T)
+write.table(kraken_species, 'kraken_matrices/normalized/kraken_Species_Normalized.csv', sep=',', row.names=F, col.names=T)
+write.table(kraken_species_raw, 'kraken_matrices/raw/kraken_Species_Raw.csv', sep=',', row.names=F, col.names=T)
 
 
 
