@@ -23,7 +23,7 @@ meg_find_hulls <- function(x) x[chull(x$Ord1, x$Ord2),]
 
 # Function that returns species count, rarefied species count, and alpha diversity measures
 # for each sample in the m x n matrix, m = features, n = samples
-alpha_rarefaction <- function(X, minlevel = 0, method='invsimpson') {
+alpha_rarefaction <- function(X, minlevel, method='invsimpson') {
     S <- specnumber(X, MARGIN=2)
     raremax <- min(colSums(X))
     if( raremax < minlevel ) raremax <- minlevel
@@ -43,6 +43,57 @@ heatmap_select_top_counts <- function(X, group_var, sample_var, n) {
 
 bar_select_top_counts <- function(X, group_var, n) {
     return(X[, tail(.SD, n), by=group_var])
+}
+
+
+make_sparse <- function(df, rownames, excludes, filter_min_threshold=0.15) {
+    local_df <- df[, .SD, .SDcols=!excludes]
+    filter_threshold <- quantile(rowSums(local_df), 0.15)
+    if( filter_threshold > filter_min_threshold ) filter_threshold <- filter_min_threshold
+    chosen <- which(rowSums(local_df) >= filter_threshold )
+    ret <- as.data.frame(local_df[chosen, ])
+    rownames(ret) <- df[[rownames]][chosen]
+    return(ret)
+}
+
+data_subset <- function(data_obj, subsets) {
+  local_meta <- data.table(pData(data_obj))
+  local_subset <- c()          
+    for( c in 1:length(subsets) ) {
+      
+      conditional_terms <- unlist(strsplit(subsets[[c]], ' '))
+      conditional_string <- paste('local_meta[[\'', conditional_terms[1],
+                                  '\']] ', conditional_terms[2],
+                                  ' \'', conditional_terms[3], '\'',
+                                  sep='', collapse='')
+      if(length(local_subset) > 0) {
+        local_subset <- intersect(local_subset, which(eval(parse(text=conditional_string))))
+      }
+      else {
+        local_subset <- which(eval(parse(text=conditional_string)))
+      }
+  }
+  return(data_obj[, local_subset])
+}
+
+
+data_subset_long <- function(data_obj, subsets) {
+    local_subset <- c()          
+    for( c in 1:length(subsets) ) {
+        
+        conditional_terms <- unlist(strsplit(subsets[[c]], ' '))
+        conditional_string <- paste('data_obj[[\'', conditional_terms[1],
+                                    '\']] ', conditional_terms[2],
+                                    ' \'', conditional_terms[3], '\'',
+                                    sep='', collapse='')
+        if(length(local_subset) > 0) {
+            local_subset <- intersect(local_subset, which(eval(parse(text=conditional_string))))
+        }
+        else {
+            local_subset <- which(eval(parse(text=conditional_string)))
+        }
+    }
+    return(data_obj[local_subset, ])
 }
 
 
@@ -66,6 +117,7 @@ meg_ordination <- function(data_list,
                            metadata,
                            sample_var,
                            hull_var,
+                           analysis_subset,
                            outdir,
                            data_type,
                            method='NMDS') {
@@ -79,15 +131,21 @@ meg_ordination <- function(data_list,
                             Ord2=numeric(),
                             Level_ID=character())
     setkey(all_ord, ID)
-    for( l in 1:length(data_list) ) {
-        # Open the graphics device at the specified location and figure size
-        png(filename=paste(outdir, '/', method, '_', hull_var, '_',
-                           data_names[l], '.png', sep='', collapse=''), 
-            width=1024, height=768)
+    
+    local_obj <- data_list
+    for( l in 1:length(local_obj) ) {
+      
+        if(length(analysis_subset) > 0) {
+          local_obj[[l]] <- data_subset(local_obj[[l]], analysis_subset)
+        }
+        local_meta <- metadata
+        local_meta <- local_meta[local_meta[[sample_var]] %in% colnames(MRcounts(local_obj[[l]])), ]
         
         # Transpose the matrix for NMDS (groups are now in rows and features in columns)
-        t_data <- t(MRcounts(data_list[[l]]))
-        t_data <- t_data[which(!is.na(metadata[[sample_var]]) & metadata[[sample_var]] != 'NA'), colSums(t_data) > 0]
+        t_data <- t(MRcounts(local_obj[[l]]))
+        local_meta <- local_meta[rowSums(t_data) > 0, ]
+        t_data <- t_data[rowSums(t_data) > 0, ]
+        t_data <- t_data[which(!is.na(local_meta[[sample_var]]) & local_meta[[sample_var]] != 'NA'), colSums(t_data) > 0]
         
         if( method == 'NMDS' ) {
             # Set parallel to whatever your computer can support in terms of CPU count
@@ -146,6 +204,12 @@ meg_ordination <- function(data_list,
         else if( method == 'PCA' ) {
             g_ord <- g_ord + xlab('PC1') + ylab('PC2')
         }
+        
+        # Open the graphics device at the specified location and figure size
+        png(filename=paste(outdir, '/', method, '_', hull_var, '_',
+                           data_names[l], '.png', sep='', collapse=''), 
+            width=1024, height=768)
+        
         print(g_ord)
         
         # Turn off graphics device to save the graphic
@@ -158,9 +222,7 @@ meg_ordination <- function(data_list,
     all_hulls <- within(all_hulls, Level_ID
                         <- factor(Level_ID, levels=data_names,
                                   ordered=T))
-    png(filename=paste(outdir, '/', method, '_', hull_var, '_',
-                       'AllLevels.png', sep='', collapse=''),
-        width=1024, height=768)
+
     g_all_ord <- ggplot(data=all_ord, aes(Ord1, Ord2, color=Group_Var, fill=Group_Var)) +
         geom_point(size=3) + 
         geom_polygon(data=all_hulls, aes(x=Ord1, y=Ord2, color=Group_Var, fill=Group_Var),
@@ -179,6 +241,10 @@ meg_ordination <- function(data_list,
               legend.title=element_text(size=24, hjust=0.5),
               legend.text=element_text(size=20),
               plot.title=element_text(size=30, hjust=0.5))
+    
+    png(filename=paste(outdir, '/', method, '_', hull_var, '_',
+                       'AllLevels.png', sep='', collapse=''),
+        width=1024, height=768)
     print(g_all_ord)
     dev.off()
 }
@@ -189,6 +255,7 @@ meg_heatmap <- function(melted_data,
                         sample_var,
                         group_var,
                         level_var,
+                        analysis_subset,
                         outdir,
                         data_type) {
     tile_subset <- melted_data[Level_ID == level_var, ]
@@ -197,6 +264,10 @@ meg_heatmap <- function(melted_data,
     
     tile_subset <- metadata[tile_subset]
     tile_subset <- tile_subset[!is.na(tile_subset[[group_var]]), ]
+    
+    if(length(analysis_subset) > 0) {
+        tile_subset <- data_subset_long(tile_subset, analysis_subset)
+    }
     
     sample_order <- unique(tile_subset[order(group_var), sample_var])
     tile_subset <- within(tile_subset, sample_var
@@ -255,6 +326,7 @@ meg_alpha_rarefaction <- function(data_list,
                                   metadata,
                                   sample_var,
                                   group_var,
+                                  analysis_subset,
                                   outdir,
                                   data_type) {
     all_alphadiv <- data.table(ID=character(),
@@ -272,8 +344,20 @@ meg_alpha_rarefaction <- function(data_list,
                                    Value=numeric())
     names(all_species_rare)[1] <- sample_var
     
-    for( l in 1:length(data_list) ) {
-        local_obj <- alpha_rarefaction(MRcounts(data_list[[l]]))
+    local_data <- data_list
+    
+    for( l in 1:length(local_data) ) {
+        
+        if(length(analysis_subset) > 0) {
+            local_data[[l]] <- data_subset(local_data[[l]], analysis_subset)
+        }
+        
+        sample_counts <- colSums(MRcounts(local_data[[l]]))
+        if(min(sample_counts) == 0) {
+            non_zero_sample <- min(sample_counts[sample_counts > 0])
+        }
+        
+        local_obj <- alpha_rarefaction(MRcounts(local_data[[l]]), minlevel = non_zero_sample)
         temp <- data.table(ID=names(local_obj$alphadiv),
                            Level=rep(data_names[l],
                                      length(local_obj$alphadiv)),
@@ -316,9 +400,7 @@ meg_alpha_rarefaction <- function(data_list,
     all_alphadiv <- all_alphadiv[!is.na(all_alphadiv[[group_var]]), ]
     all_species_raw <- all_species_raw[!is.na(all_species_raw[[group_var]]), ]
     all_species_rare <- all_species_rare[!is.na(all_species_rare[[group_var]]), ]
-    
-    test <<- all_alphadiv
-    
+        
     alphadiv_type_sums <- all_alphadiv[Level==data_names[2], median(Value), by=group_var]
     alphadiv_value_labels <- as.character(alphadiv_type_sums[[group_var]][order(alphadiv_type_sums$V1, decreasing=T)])
     
@@ -416,13 +498,18 @@ meg_barplot <- function(melted_data,
                         sample_var,
                         group_var,
                         level_var,
+                        analysis_subset,
                         outdir,
                         data_type) {
     setkeyv(melted_data, sample_var)
     melted_data <- metadata[melted_data]
     
-    bar_subset <- data.table(melted_data[Level_ID == level_var &
-                                                 !is.na(melted_data[[group_var]]),
+    if(length(analysis_subset) > 0) {
+        bar_subset <- data_subset_long(melted_data, analysis_subset)
+    }
+    
+    bar_subset <- data.table(bar_subset[Level_ID == level_var &
+                                                 !is.na(bar_subset[[group_var]]),
                                                     .SD,
                                                     .SDcols=c(sample_var,
                                                               group_var,
@@ -505,21 +592,10 @@ meg_fitZig <- function(data_list,
         if( filter_threshold > filter_min_threshold ) filter_threshold <- filter_min_threshold
         local_obj[[l]] <- local_obj[[l]][which(rowSums(MRcounts(local_obj[[l]])) >= filter_threshold ), ]
         
-
-        local_meta <- data.table(pData(local_obj[[l]]))
-        local_subset <- c()
-        for( pair in 0:((length(analysis_subset) / 2) - 1) ) {
-        	if( !is.na(analysis_subset[[(2*pair)+1]]) ) {
-			    local_subset <- c(local_subset,
-			                      which(local_meta[[analysis_subset[[(2*pair)+1]]]] == analysis_subset[[(2*pair)+2]]))
-				
-        	}
+        if(length(analysis_subset) > 0) {
+            local_obj[[l]] <- data_subset(local_obj[[l]], analysis_subset)
         }
         
-        if(length(local_subset) > 0){
-            local_subset <- unique(local_subset)
-            local_obj[[l]] <- local_obj[[l]][, local_subset]
-        }
         
         col_selection <- as.integer(which(colSums(MRcounts(local_obj[[l]]) > 0) > 1))
         local_obj[[l]] <- local_obj[[l]][, col_selection]
@@ -566,26 +642,49 @@ meg_fitZig <- function(data_list,
         contrast_matrix <- do.call(makeContrasts, local_contrasts)
         colnames(contrast_matrix) <- make.names(contrast_list)
         
-        contrast_fit <- contrasts.fit(res[[l]]$fit, contrast_matrix)
+        contrast_fit <- contrasts.fit(res[[l]]$fit, contrast_matrix)        
+        contrast_fit <- eBayes(contrast_fit)
         
+        stats_results <- data.table(
+            Node.Name=character(),
+            Contrast=character(),
+            logFC=numeric(),
+            CI.L=numeric(),
+            CI.R=numeric(),
+            AveExpr=numeric(),
+            t=numeric(),
+            P.Value=numeric(),
+            adj.P.Val=numeric(),
+            B=numeric()
+        )
         
-        contrast_fit <- topTable(eBayes(contrast_fit), p.value=pval, confint=T, number=top_hits)
-        if( nrow(contrast_fit) > 0 ) {
-            if( length(contrast_list) == 1 ) {
-                write.csv(contrast_fit, file=paste(outdir, '/', analysis_name, '_', data_type, '_',
-                                                   data_names[l], '_',
-                                                   contrast_list[1], '_Model_Contrasts.csv',
-                                                   sep='', collapse=''), quote=F)
+        for( c in 1:ncol(contrast_fit$contrasts) ) {
+            tophits <- topTable(contrast_fit, p.value=pval, confint=T,
+                                number=top_hits, sort.by='AveExpr', coef=c)
+            
+            if( nrow(tophits) > 0) {
+                temp_res <- data.table(
+                    Node.Name=rownames(tophits),
+                    Contrast=rep(colnames(contrast_fit$contrasts)[c], nrow(tophits))
+                )
+                temp_res <- cbind(temp_res, tophits)
+                stats_results <- rbind(stats_results, temp_res)
             }
             else {
-                write.csv(contrast_fit, file=paste(outdir, '/', analysis_name, '_', data_type, '_',
-                                                   data_names[l], '_Model_Contrasts.csv',
-                                                   sep='', collapse=''), quote=F)
+                print(paste('No significant results for', data_type,
+                            data_names[l], analysis_name,
+                            colnames(contrast_fit$contrasts)[c],
+                            sep=' ', collapse=''))
             }
         }
-        else {
-            print(paste('No significant results for ', data_type, ' ', data_names[l], ' ', analysis_name,
-                        sep='', collapse=''))
+                
+        if( nrow(stats_results) > 0 ) {
+            write.csv(stats_results,
+                      file=paste(outdir, '/', analysis_name, '_', data_type, '_',
+                                                data_names[l], '_',
+                                                contrast_list[1], '_Model_Contrasts.csv',
+                                                sep='', collapse=''),
+                      quote=F, row.names=F)
         }
     }
 }
