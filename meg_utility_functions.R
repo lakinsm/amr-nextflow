@@ -356,6 +356,9 @@ meg_alpha_rarefaction <- function(data_list,
         if(min(sample_counts) == 0) {
             non_zero_sample <- min(sample_counts[sample_counts > 0])
         }
+        else {
+            non_zero_sample <- 0
+        }
         
         local_obj <- alpha_rarefaction(MRcounts(local_data[[l]]), minlevel = non_zero_sample)
         temp <- data.table(ID=names(local_obj$alphadiv),
@@ -506,6 +509,9 @@ meg_barplot <- function(melted_data,
     
     if(length(analysis_subset) > 0) {
         bar_subset <- data_subset_long(melted_data, analysis_subset)
+    }
+    else {
+        bar_subset <- melted_data
     }
     
     bar_subset <- data.table(bar_subset[Level_ID == level_var &
